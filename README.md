@@ -55,24 +55,10 @@ Bot VPS'ten FiveM HTTP endpoint'ine erismeli (port + firewall).
 
 ## Railway deploy
 
-1. GitHub repo'yu Railway'e bagla (New Project → Deploy from GitHub)
-2. Root directory: repo kok dizini (bot projesi tek basina repo)
-3. Asagidaki env degiskenlerini Railway Variables'a ekle:
+Repo: **https://github.com/ThisKingpin/kingpin-ai-vehicle-bot**
 
-| Variable | Zorunlu |
-|----------|---------|
-| `DISCORD_TOKEN` | Evet |
-| `DISCORD_CLIENT_ID` | Evet |
-| `GEMINI_API_KEY` | Evet |
-| `AI_VEHICLE_SECRET` | Evet (FiveM ile ayni) |
-| `FIVEM_BASE_URL` | Evet (`http://IP:30120`) |
-| `SERVER_NAME` | Evet |
-| `LOG_CHANNEL_ID` | Onerilir |
-| `ADMIN_ROLE_ID` | Onerilir |
-| `GUILD_ID` | Onerilir (hizli slash komut guncelleme) |
-| `OPENAI_API_KEY` | Opsiyonel (fallback) |
+1. [Railway](https://railway.app) → New Project → Deploy from GitHub → `kingpin-ai-vehicle-bot`
 
-4. Deploy sonrasi bot otomatik baslar ve slash komutlari kaydeder
-5. FiveM sunucusunda Railway cikis IP'sine HTTP portu ac
+2. Asagidaki env degiskenlerini Railway **Variables** sekmesine ekle:
 
 **Not:** `dist/` git'e girmez; Railway build sirasinda `npm run build` calistirir.
