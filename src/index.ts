@@ -5,6 +5,13 @@ import { aracLogCommand } from './commands/arac-log.js';
 import { aracYenidenAnalizCommand } from './commands/arac-yeniden-analiz.js';
 import { handleButtonInteraction } from './handlers/buttons.js';
 
+/** Railway/env: basta-sonda bosluk ve yanlis tirnak temizle */
+function env(name: string): string | undefined {
+  const raw = process.env[name];
+  if (!raw) return undefined;
+  return raw.trim().replace(/^["']|["']$/g, '');
+}
+
 const commands = [aracalCommand, aracLogCommand, aracYenidenAnalizCommand];
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -46,29 +53,39 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 async function registerCommands() {
-  const token = process.env.DISCORD_TOKEN;
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const guildId = process.env.GUILD_ID;
-  if (!token || !clientId) return;
+  const token = env('DISCORD_TOKEN');
+  const clientId = env('DISCORD_CLIENT_ID');
+  const guildId = env('GUILD_ID');
+  if (!token || !clientId) {
+    console.warn('[kingpin-ai-vehicle-bot] DISCORD_TOKEN veya DISCORD_CLIENT_ID eksik — slash komutlari kaydedilmedi.');
+    return;
+  }
 
   const rest = new REST().setToken(token);
   const body = commands.map((c) => c.data.toJSON());
 
-  if (guildId) {
-    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
-    console.log('[kingpin-ai-vehicle-bot] Guild komutlari kaydedildi.');
-  } else {
-    await rest.put(Routes.applicationCommands(clientId), { body });
-    console.log('[kingpin-ai-vehicle-bot] Global komutlar kaydedildi.');
+  try {
+    if (guildId) {
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
+      console.log(`[kingpin-ai-vehicle-bot] Guild komutlari kaydedildi (guild: ${guildId}).`);
+    } else {
+      await rest.put(Routes.applicationCommands(clientId), { body });
+      console.log('[kingpin-ai-vehicle-bot] Global komutlar kaydedildi.');
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[kingpin-ai-vehicle-bot] Slash komut kaydi basarisiz (401 = token veya client ID hatali):', msg);
+    throw err;
   }
 }
 
 async function main() {
-  if (!process.env.DISCORD_TOKEN) {
+  const token = env('DISCORD_TOKEN');
+  if (!token) {
     throw new Error('DISCORD_TOKEN env eksik');
   }
   await registerCommands();
-  await client.login(process.env.DISCORD_TOKEN);
+  await client.login(token);
 }
 
 main().catch((err) => {

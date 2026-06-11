@@ -12,7 +12,31 @@ npm run register-commands
 npm run dev
 ```
 
-## Ortam degiskenleri
+## Discord 401 hatasi (slash komut kaydi)
+
+`401 Unauthorized` = Discord token veya Application ID gecersiz.
+
+Kontrol listesi:
+
+1. **Bot Token kullan** — Developer Portal → Application → **Bot** → Reset Token / Copy  
+   - Client Secret **DEGIL**
+   - User token **DEGIL**
+
+2. **DISCORD_CLIENT_ID** = Application ID (General Information)  
+   - URL'deki ID: `1514764198062850159` ise Railway'de de aynisi olmali
+
+3. **Token sifirlandi mi?** — Portal'da reset yaptiysan eski token calismaz; Railway'de guncelle
+
+4. **Tirnak/bosluk yok** — Railway Variables:
+   ```
+   DISCORD_TOKEN=MTIz...   (tirnaksiz)
+   ```
+   Yanlis: `"MTIz..."` veya sonda bosluk
+
+5. **Bot sunucuda mi?** — OAuth2 URL Generator ile `bot` + `applications.commands` scope; botu guild'e davet et
+
+6. **GUILD_ID** = `1508952770730922095` (sunucu ID, botun eklendigi sunucu)
+
 
 | Degisken | Aciklama |
 |----------|----------|
