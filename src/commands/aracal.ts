@@ -1,11 +1,9 @@
 import { SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
-import { verifyCharacter, FivemApiError } from '../services/fivem.js';
+import { verifyCharacter } from '../services/fivem.js';
 import { runAnalysis } from '../services/analysis.js';
 import { autoGrantTopVehicle, formatGrantError, sendGrantAuditLog } from '../services/auto-grant.js';
 import { buildPlayerGrantedEmbed } from '../embeds/staff.js';
-
-const STORY_MIN = 50;
-const STORY_MAX = 4000;
+import { resolveStoryText, StoryFetchError, STORY_MAX } from '../services/story-fetch.js';
 
 export const aracalCommand = {
   data: new SlashCommandBuilder()
@@ -19,29 +17,41 @@ export const aracalCommand = {
     )
     .addStringOption((opt) =>
       opt
+        .setName('konu_id')
+        .setDescription('Forum hikaye konusu ID (sag tik → Konu ID\'sini Kopyala)')
+        .setRequired(false),
+    )
+    .addStringOption((opt) =>
+      opt
+        .setName('mesaj_linki')
+        .setDescription('Forum gonderi linki (channels/.../konu-id)')
+        .setRequired(false),
+    )
+    .addStringOption((opt) =>
+      opt
         .setName('hikaye')
-        .setDescription('Karakter hikayen (min 50 karakter)')
-        .setRequired(true)
-        .setMaxLength(STORY_MAX),
+        .setDescription('Kisa hikaye (opsiyonel — uzun hikaye icin konu_id kullanin)')
+        .setRequired(false)
+        .setMaxLength(4000),
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const characterName = interaction.options.getString('karakter_adi', true);
-    const story = interaction.options.getString('hikaye', true).trim();
+    const threadId = interaction.options.getString('konu_id');
+    const link = interaction.options.getString('mesaj_linki');
+    const directStory = interaction.options.getString('hikaye');
     const discordId = interaction.user.id;
     const serverName = process.env.SERVER_NAME ?? 'Kingpin RP';
-
-    if (story.length < STORY_MIN) {
-      await interaction.reply({
-        content: `Hikaye en az ${STORY_MIN} karakter olmali.`,
-        ephemeral: true,
-      });
-      return;
-    }
 
     await interaction.deferReply({ ephemeral: true });
 
     try {
+      const { story, source } = await resolveStoryText(interaction.client, interaction.guildId, {
+        direct: directStory,
+        threadId,
+        link,
+      });
+
       const verified = await verifyCharacter(discordId, characterName);
       if (!verified.success || !verified.citizenid) {
         await interaction.editReply({ content: verified.error ?? 'Karakter dogrulanamadi.' });
@@ -65,23 +75,31 @@ export const aracalCommand = {
       const granted = await autoGrantTopVehicle(pending, `ai:${discordId}`);
       await sendGrantAuditLog(interaction.client, pending, granted, `ai:${discordId}`);
 
+      const sourceNote =
+        source.startsWith('forum') || source.startsWith('link')
+          ? `\n\n_Kaynak: forum konusu (${story.length} karakter okundu, max ${STORY_MAX})_`
+          : '';
+
+      const embed = buildPlayerGrantedEmbed(
+        pending.characterName,
+        {
+          label: granted.label,
+          model: granted.model,
+          garage: granted.garage,
+          score: top.score,
+          reason: top.reason,
+        },
+        pending.recommendations,
+      );
+
+      embed.setFooter({ text: `Kaynak: ${source}` });
+
       await interaction.editReply({
-        embeds: [
-          buildPlayerGrantedEmbed(
-            pending.characterName,
-            {
-              label: granted.label,
-              model: granted.model,
-              garage: granted.garage,
-              score: top.score,
-              reason: top.reason,
-            },
-            pending.recommendations,
-          ),
-        ],
+        content: sourceNote || undefined,
+        embeds: [embed],
       });
     } catch (err) {
-      const msg = formatGrantError(err);
+      const msg = err instanceof StoryFetchError ? err.message : formatGrantError(err);
       await interaction.editReply({ content: msg });
     }
   },

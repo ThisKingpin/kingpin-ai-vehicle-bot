@@ -51,10 +51,24 @@ Kontrol listesi:
 | `STAFF_CHANNEL_ID` | Kullanilmiyor (eski onay akisi kaldirildi) |
 | `ADMIN_ROLE_ID` | Yetkili rol |
 | `GUILD_ID` | Hizli slash komut kaydi (opsiyonel) |
+| `FORUM_CHANNEL_ID` | Opsiyonel — sadece bu forumdaki konular kabul edilir |
 
 ## Komutlar
 
 - `/aracal` — Hikaye analizi + **otomatik** en uygun arac garaja eklenir
+
+**Uzun hikaye (forum):** Forumda karakter hikayeni yaz, konuya sag tik → **Konu ID'sini Kopyala**:
+```
+/aracal karakter_adi:Ahmet Yilmaz konu_id:1234567890123456789
+```
+Veya forum linkini yapistir:
+```
+/aracal karakter_adi:Ahmet Yilmaz mesaj_linki:https://discord.com/channels/...
+```
+
+Bot forum konusunun ilk mesajini (ve gerekirse devamini) okur — 12000 karaktere kadar.
+
+**Bot yetkileri:** Forum kanalinda *Kanallari Gor*, *Mesaj Gecmisini Oku*.
 - `/arac-log` — Yetkili gecmis
 - `/arac-yeniden-analiz` — Yetkili: yeniden analiz + otomatik ver
 
