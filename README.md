@@ -61,4 +61,20 @@ Repo: **https://github.com/ThisKingpin/kingpin-ai-vehicle-bot**
 
 2. Asagidaki env degiskenlerini Railway **Variables** sekmesine ekle:
 
+| Variable | Zorunlu |
+|----------|---------|
+| `DISCORD_TOKEN` | Evet |
+| `DISCORD_CLIENT_ID` | Evet |
+| `GEMINI_API_KEY` | Evet |
+| `AI_VEHICLE_SECRET` | Evet (FiveM ile ayni) |
+| `FIVEM_BASE_URL` | Evet (`http://IP:30120`) |
+| `SERVER_NAME` | Evet |
+| `LOG_CHANNEL_ID` | Onerilir |
+| `ADMIN_ROLE_ID` | Onerilir |
+| `GUILD_ID` | Onerilir |
+| `OPENAI_API_KEY` | Opsiyonel |
+
+3. Deploy sonrasi bot otomatik baslar ve slash komutlari kaydeder
+4. FiveM sunucusunda Railway cikis IP'sine HTTP portu ac
+
 **Not:** `dist/` git'e girmez; Railway build sirasinda `npm run build` calistirir.
