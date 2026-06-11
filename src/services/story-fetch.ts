@@ -1,5 +1,4 @@
 import {
-  ChannelType,
   type Client,
   type Message,
   type ThreadChannel,
@@ -147,12 +146,7 @@ async function fetchFromLink(
       return fetchFromThread(client, channel);
     }
 
-    if (
-      channel &&
-      (channel.type === ChannelType.GuildText ||
-        channel.type === ChannelType.GuildForum ||
-        channel.type === ChannelType.GuildAnnouncement)
-    ) {
+    if (channel && 'messages' in channel) {
       const message = await channel.messages.fetch(parsed.messageId);
       return validateStory(messageToText(message));
     }
@@ -182,13 +176,6 @@ export async function resolveStoryText(
       'Hikaye gerekli: `hikaye` yazin VEYA forum `konu_id` / `mesaj_linki` verin.',
     );
   }
-  if (sources.length > 1 && direct && (threadId || link)) {
-    // direct + link ikisi doluysa link/konu oncelikli (uzun hikaye icin)
-    if (threadId || link) {
-      // ignore short direct if forum source provided
-    }
-  }
-
   if (threadId) {
     const story = await fetchFromThreadId(client, threadId, interactionGuildId);
     return { story, source: `forum_konu:${threadId}` };
