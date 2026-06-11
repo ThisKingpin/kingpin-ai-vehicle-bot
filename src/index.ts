@@ -5,6 +5,7 @@ import { aracLogCommand } from './commands/arac-log.js';
 import { aracYenidenAnalizCommand } from './commands/arac-yeniden-analiz.js';
 import { handleButtonInteraction } from './handlers/buttons.js';
 import { env, getDiscordToken, maskToken } from './env.js';
+import { pingFivemOnStartup } from './services/fivem.js';
 
 const commands = [aracalCommand, aracLogCommand, aracYenidenAnalizCommand];
 
@@ -87,10 +88,12 @@ async function main() {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[kingpin-ai-vehicle-bot] Slash komut kaydi basarisiz:', msg);
     console.error(
-      '[kingpin-ai-vehicle-bot] Cozum: Developer Portal → Bot → Reset Token → Railway DISCORD_TOKEN guncelle. Bot sunucuda olsa bile 401 = token hatali.',
+      '[kingpin-ai-vehicle-bot] Cozum: Developer Portal → Bot → Reset Token → Railway DISCORD_TOKEN guncelle.',
     );
     throw err;
   }
+
+  await pingFivemOnStartup();
 }
 
 main().catch((err) => {
