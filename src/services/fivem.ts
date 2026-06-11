@@ -1,5 +1,3 @@
-import { createHmac } from 'node:crypto';
-
 function getConfig() {
   const secret = process.env.AI_VEHICLE_SECRET;
   const baseUrl = process.env.FIVEM_BASE_URL;
@@ -8,24 +6,26 @@ function getConfig() {
   return { secret, baseUrl: baseUrl.replace(/\/$/, '') };
 }
 
-function signRequest(body: string): { timestamp: string; signature: string } {
+function authHeaders(): { timestamp: string; authorization: string } {
   const { secret } = getConfig();
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
-  return { timestamp, signature };
+  return {
+    timestamp,
+    authorization: `Bearer ${secret}`,
+  };
 }
 
 async function post<T>(path: string, payload: Record<string, unknown>): Promise<T> {
   const { baseUrl } = getConfig();
   const body = JSON.stringify(payload);
-  const { timestamp, signature } = signRequest(body);
+  const { timestamp, authorization } = authHeaders();
 
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Timestamp': timestamp,
-      'X-Signature': signature,
+      Authorization: authorization,
     },
     body,
   });
