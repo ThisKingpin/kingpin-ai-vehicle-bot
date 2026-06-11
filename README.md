@@ -40,8 +40,8 @@ Kontrol listesi:
 
 | Degisken | Aciklama |
 |----------|----------|
-| `DISCORD_TOKEN` | Bot token |
-| `DISCORD_CLIENT_ID` | Uygulama ID |
+| `DISCORD_TOKEN` | **Bot Token** (Bot sekmesi — Client Secret degil!) |
+| `DISCORD_CLIENT_ID` | Opsiyonel (bot token'daki app id otomatik kullanilir) |
 | `GEMINI_API_KEY` | Google Gemini API |
 | `OPENAI_API_KEY` | JSON fallback (opsiyonel ama onerilir) |
 | `AI_VEHICLE_SECRET` | FiveM ile ayni secret |

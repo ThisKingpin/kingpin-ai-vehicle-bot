@@ -4,13 +4,7 @@ import { aracalCommand } from './commands/aracal.js';
 import { aracLogCommand } from './commands/arac-log.js';
 import { aracYenidenAnalizCommand } from './commands/arac-yeniden-analiz.js';
 import { handleButtonInteraction } from './handlers/buttons.js';
-
-/** Railway/env: basta-sonda bosluk ve yanlis tirnak temizle */
-function env(name: string): string | undefined {
-  const raw = process.env[name];
-  if (!raw) return undefined;
-  return raw.trim().replace(/^["']|["']$/g, '');
-}
+import { env, getDiscordToken, maskToken } from './env.js';
 
 const commands = [aracalCommand, aracLogCommand, aracYenidenAnalizCommand];
 
@@ -20,10 +14,6 @@ const commandMap = new Collection<string, (typeof commands)[number]>();
 for (const cmd of commands) {
   commandMap.set(cmd.data.name, cmd);
 }
-
-client.once(Events.ClientReady, (c) => {
-  console.log(`[kingpin-ai-vehicle-bot] Giris yapildi: ${c.user.tag}`);
-});
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
@@ -52,40 +42,55 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-async function registerCommands() {
-  const token = env('DISCORD_TOKEN');
-  const clientId = env('DISCORD_CLIENT_ID');
+async function registerCommands(token: string, applicationId: string) {
   const guildId = env('GUILD_ID');
-  if (!token || !clientId) {
-    console.warn('[kingpin-ai-vehicle-bot] DISCORD_TOKEN veya DISCORD_CLIENT_ID eksik — slash komutlari kaydedilmedi.');
-    return;
-  }
-
   const rest = new REST().setToken(token);
   const body = commands.map((c) => c.data.toJSON());
 
-  try {
-    if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
-      console.log(`[kingpin-ai-vehicle-bot] Guild komutlari kaydedildi (guild: ${guildId}).`);
-    } else {
-      await rest.put(Routes.applicationCommands(clientId), { body });
-      console.log('[kingpin-ai-vehicle-bot] Global komutlar kaydedildi.');
-    }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[kingpin-ai-vehicle-bot] Slash komut kaydi basarisiz (401 = token veya client ID hatali):', msg);
-    throw err;
+  if (guildId) {
+    await rest.put(Routes.applicationGuildCommands(applicationId, guildId), { body });
+    console.log(`[kingpin-ai-vehicle-bot] Guild komutlari kaydedildi (app: ${applicationId}, guild: ${guildId}).`);
+  } else {
+    await rest.put(Routes.applicationCommands(applicationId), { body });
+    console.log(`[kingpin-ai-vehicle-bot] Global komutlar kaydedildi (app: ${applicationId}).`);
   }
 }
 
 async function main() {
-  const token = env('DISCORD_TOKEN');
-  if (!token) {
-    throw new Error('DISCORD_TOKEN env eksik');
-  }
-  await registerCommands();
+  const token = getDiscordToken();
+  console.log(`[kingpin-ai-vehicle-bot] Token yuklendi: ${maskToken(token)}`);
+
+  // Once Discord'a baglan — token gecersizse burada anlasilir
   await client.login(token);
+
+  await new Promise<void>((resolve) => {
+    if (client.isReady()) {
+      resolve();
+      return;
+    }
+    client.once(Events.ClientReady, () => resolve());
+  });
+
+  const applicationId = client.user!.id;
+  console.log(`[kingpin-ai-vehicle-bot] Giris: ${client.user!.tag} (id: ${applicationId})`);
+
+  const envClientId = env('DISCORD_CLIENT_ID');
+  if (envClientId && envClientId !== applicationId) {
+    console.warn(
+      `[kingpin-ai-vehicle-bot] UYARI: DISCORD_CLIENT_ID (${envClientId}) token'daki app id (${applicationId}) ile uyusmuyor. Token'daki id kullaniliyor.`,
+    );
+  }
+
+  try {
+    await registerCommands(token, applicationId);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[kingpin-ai-vehicle-bot] Slash komut kaydi basarisiz:', msg);
+    console.error(
+      '[kingpin-ai-vehicle-bot] Cozum: Developer Portal → Bot → Reset Token → Railway DISCORD_TOKEN guncelle. Bot sunucuda olsa bile 401 = token hatali.',
+    );
+    throw err;
+  }
 }
 
 main().catch((err) => {
