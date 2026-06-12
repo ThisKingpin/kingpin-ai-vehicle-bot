@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AiAnalysisSchema, type AiAnalysis } from '../types.js';
+import { env } from '../env.js';
 import { withTimeout } from '../utils/timeout.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
@@ -28,13 +29,24 @@ Kurallar:
 
 Sadece JSON dondur. Baska metin ekleme.`;
 
-export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY env eksik');
+/** gemini-2.0-flash shut down June 2026 — use 2.5+ on free tier */
+const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
 
+function getModelCandidates(): string[] {
+  const configured = env('GEMINI_MODEL');
+  if (configured) return [configured];
+  return [...DEFAULT_MODELS];
+}
+
+function isQuotaError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+}
+
+async function generateWithModel(apiKey: string, modelName: string, story: string): Promise<AiAnalysis> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: modelName,
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.4,
@@ -47,11 +59,35 @@ export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis>
       { text: `Karakter hikayesi:\n\n${story}` },
     ]),
     60_000,
-    'Gemini analizi',
+    `Gemini analizi (${modelName})`,
   );
 
   const text = result.response.text();
   return parseAnalysisJson(text);
+}
+
+export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis> {
+  const apiKey = env('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY env eksik');
+
+  const models = getModelCandidates();
+  let lastError: unknown;
+
+  for (const modelName of models) {
+    try {
+      console.log(`[gemini] Model deneniyor: ${modelName}`);
+      return await generateWithModel(apiKey, modelName, story);
+    } catch (err) {
+      lastError = err;
+      if (isQuotaError(err) && models.indexOf(modelName) < models.length - 1) {
+        console.warn(`[gemini] ${modelName} kotasi dolu, sonraki model deneniyor...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError ?? new Error('Gemini analizi basarisiz');
 }
 
 function parseAnalysisJson(raw: string): AiAnalysis {

@@ -26,8 +26,11 @@ async function analyzeStory(story: string): Promise<AiAnalysis> {
     } catch (geminiErr) {
       if (!openaiKey) {
         const reason = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        const quotaHint = reason.includes('429') || reason.includes('quota')
+          ? ' gemini-2.0-flash kapatildi — GEMINI_MODEL=gemini-2.5-flash deneyin veya Google AI Studio\'da billing acin.'
+          : '';
         throw new Error(
-          `Gemini analizi basarisiz: ${reason}. GEMINI_API_KEY degerini kontrol edin veya yedek icin OPENAI_API_KEY ekleyin.`,
+          `Gemini analizi basarisiz: ${reason}.${quotaHint} Yedek icin OPENAI_API_KEY de ekleyebilirsiniz.`,
         );
       }
       console.warn('[analysis] Gemini basarisiz, OpenAI fallback kullaniliyor:', geminiErr);
