@@ -45,18 +45,32 @@ export const aracalCommand = {
 
     await interaction.deferReply({ ephemeral: true });
 
+    const progress = async (text: string) => {
+      try {
+        await interaction.editReply({ content: text });
+      } catch {
+        // ignore
+      }
+    };
+
     try {
+      await progress('Forum hikayesi okunuyor...');
+
       const { story, source } = await resolveStoryText(interaction.client, interaction.guildId, {
         direct: directStory,
         threadId,
         link,
       });
 
+      await progress('Karakter dogrulaniyor (FiveM)...');
+
       const verified = await verifyCharacter(discordId, characterName);
       if (!verified.success || !verified.citizenid) {
         await interaction.editReply({ content: verified.error ?? 'Karakter dogrulanamadi.' });
         return;
       }
+
+      await progress('Hikaye AI ile analiz ediliyor...');
 
       const pending = await runAnalysis({
         discordId,
@@ -71,6 +85,8 @@ export const aracalCommand = {
         await interaction.editReply({ content: 'Hikayeniz icin uygun arac bulunamadi.' });
         return;
       }
+
+      await progress('Arac garaja ekleniyor (FiveM)...');
 
       const granted = await autoGrantTopVehicle(pending, `ai:${discordId}`);
       await sendGrantAuditLog(interaction.client, pending, granted, `ai:${discordId}`);

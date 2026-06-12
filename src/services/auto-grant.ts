@@ -1,5 +1,7 @@
 import { ChannelType, type Client } from 'discord.js';
-import { grantVehicle, FivemApiError, FivemConnectionError } from './fivem.js';
+import { grantVehicle, saveAndGrant, FivemApiError, FivemConnectionError } from './fivem.js';
+import { hashStory } from './analysis.js';
+import { loadVehicleCatalog } from './scorer.js';
 import { buildLogEmbed, buildAuditEmbed } from '../embeds/staff.js';
 import type { PendingRequest } from '../types.js';
 
@@ -12,20 +14,51 @@ export async function autoGrantTopVehicle(
     throw new Error('Analiz sonucu arac onerisi uretilemedi.');
   }
 
-  const result = await grantVehicle({
-    requestId: pending.requestId,
-    grantToken: pending.grantToken,
-    model: top.vehicle,
-    citizenid: pending.citizenid,
-    adminId: grantedBy,
-  });
+  const catalog = loadVehicleCatalog();
+  const storyHash = pending.storyHash ?? hashStory(pending.storyText);
+  const vehiclesVersion = pending.vehiclesVersion ?? catalog.version;
 
-  return {
-    model: result.model,
-    label: result.label,
-    garage: result.garage,
-    vehicleId: result.vehicleId,
-  };
+  let result: { model: string; label: string; garage: string; vehicleId: number };
+
+  if (pending.grantToken) {
+    const granted = await grantVehicle({
+      requestId: pending.requestId,
+      grantToken: pending.grantToken,
+      model: top.vehicle,
+      citizenid: pending.citizenid,
+      adminId: grantedBy,
+    });
+    result = {
+      model: granted.model,
+      label: granted.label,
+      garage: granted.garage,
+      vehicleId: granted.vehicleId,
+    };
+  } else {
+    const granted = await saveAndGrant({
+      requestId: pending.requestId,
+      discordId: pending.discordId,
+      citizenid: pending.citizenid,
+      characterName: pending.characterName,
+      serverName: pending.serverName,
+      storyText: pending.storyText,
+      storyHash,
+      vehiclesVersion,
+      aiProfileJson: JSON.stringify(pending.analysis),
+      recommendedVehiclesJson: JSON.stringify(pending.recommendations),
+      topScoresJson: JSON.stringify(pending.recommendations),
+      model: top.vehicle,
+      adminId: grantedBy,
+    });
+    result = {
+      model: granted.model,
+      label: granted.label,
+      garage: granted.garage,
+      vehicleId: granted.vehicleId,
+    };
+  }
+
+  return result;
 }
 
 export async function sendGrantAuditLog(

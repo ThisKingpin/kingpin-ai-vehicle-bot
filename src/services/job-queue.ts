@@ -18,6 +18,7 @@ const jobs = new Map<string, JobRecord>();
 const waiters = new Map<string, { resolve: (job: JobRecord) => void; reject: (err: Error) => void }>();
 
 const JOB_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_WAIT_MS = 45_000;
 
 function purgeStaleJobs() {
   const cutoff = Date.now() - JOB_TTL_MS;
@@ -26,7 +27,7 @@ function purgeStaleJobs() {
       jobs.delete(id);
       const waiter = waiters.get(id);
       if (waiter) {
-        waiter.reject(new Error('Islem zaman asimina ugradi (FiveM sunucusu bagli mi?)'));
+        waiter.reject(new Error('Islem zaman asimina ugradi'));
         waiters.delete(id);
       }
     }
@@ -85,33 +86,48 @@ export function completeJob(
   return true;
 }
 
-export function waitForJob(jobId: string, timeoutMs = 90_000): Promise<JobRecord> {
+export function waitForJob(jobId: string, timeoutMs = DEFAULT_WAIT_MS): Promise<JobRecord> {
   const existing = jobs.get(jobId);
   if (existing && (existing.status === 'done' || existing.status === 'failed')) {
     return Promise.resolve(existing);
   }
 
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const finish = (job: JobRecord) => {
+      clearTimeout(timer);
+      waiters.delete(jobId);
+      resolve(job);
+    };
+
+    timer = setTimeout(() => {
       waiters.delete(jobId);
       const job = jobs.get(jobId);
-      if (job && job.status === 'processing') {
+      if (job?.status === 'processing') {
         job.status = 'failed';
-        job.error = 'FiveM sunucusu yanit vermedi. kingpin-ai-vehicles acik mi? ai_vehicle_bot_url dogru mu?';
+        job.error = 'FiveM sunucusu yanit vermedi';
       }
-      reject(new Error('FiveM sunucusu yanit vermedi (90s). kingpin-ai-vehicles calisiyor mu?'));
+      reject(
+        new Error(
+          `FiveM sunucusu yanit vermedi (${Math.round(timeoutMs / 1000)}s). kingpin-ai-vehicles acik mi? ai_vehicle_bot_url dogru mu?`,
+        ),
+      );
     }, timeoutMs);
 
     waiters.set(jobId, {
-      resolve: (job) => {
-        clearTimeout(timer);
-        resolve(job);
-      },
+      resolve: finish,
       reject: (err) => {
         clearTimeout(timer);
+        waiters.delete(jobId);
         reject(err);
       },
     });
+
+    const after = jobs.get(jobId);
+    if (after && (after.status === 'done' || after.status === 'failed')) {
+      finish(after);
+    }
   });
 }
 

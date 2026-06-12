@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { analyzeStoryWithGemini } from './gemini.js';
 import { analyzeStoryFallback } from './openai.js';
-import { getCache, saveRequest } from './fivem.js';
+import { getCache } from './fivem.js';
 import { loadVehicleCatalog, mergeRecommendations, needsManualReview, rankVehicles } from './scorer.js';
 import type { AiAnalysis, PendingRequest, ScoredVehicle } from '../types.js';
 
@@ -32,6 +32,8 @@ export async function runAnalysis(params: {
           discordId: params.discordId,
           serverName: params.serverName,
           storyText: params.story,
+          storyHash,
+          vehiclesVersion: catalog.version,
           analysis: cached.aiProfileJson,
           recommendations: cached.recommendedVehiclesJson,
         };
@@ -49,30 +51,17 @@ export async function runAnalysis(params: {
   }
 
   const ranked = mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5));
-  const requestId = randomUUID();
 
-  const saved = await saveRequest({
-    requestId,
-    discordId: params.discordId,
+  return {
+    requestId: randomUUID(),
+    grantToken: '',
     citizenid: params.citizenid,
     characterName: params.characterName,
+    discordId: params.discordId,
     serverName: params.serverName,
     storyText: params.story,
     storyHash,
     vehiclesVersion: catalog.version,
-    aiProfileJson: JSON.stringify(analysis),
-    recommendedVehiclesJson: JSON.stringify(ranked),
-    topScoresJson: JSON.stringify(ranked),
-  });
-
-  return {
-    requestId: saved.requestId,
-    grantToken: saved.grantToken,
-    citizenid: params.citizenid,
-    characterName: params.characterName,
-    discordId: params.discordId,
-    serverName: params.serverName,
-    storyText: params.story,
     analysis,
     recommendations: ranked,
   };

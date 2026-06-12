@@ -80,6 +80,13 @@ export async function grantVehicle(payload: {
   );
 }
 
+export async function saveAndGrant(payload: Record<string, unknown>) {
+  return runJob<{ success: boolean; vehicleId: number; model: string; label: string; garage: string; requestId: string; grantToken: string }>(
+    'save_and_grant',
+    payload,
+  );
+}
+
 export async function rejectRequest(requestId: string, adminId: string, reason?: string) {
   return runJob<{ success: boolean }>('reject', { requestId, adminId, reason });
 }

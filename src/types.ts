@@ -70,6 +70,8 @@ export interface PendingRequest {
   discordId: string;
   serverName: string;
   storyText: string;
+  storyHash?: string;
+  vehiclesVersion?: number;
   analysis: AiAnalysis;
   recommendations: ScoredVehicle[];
 }

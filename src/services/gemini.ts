@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AiAnalysisSchema, type AiAnalysis } from '../types.js';
+import { withTimeout } from '../utils/timeout.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
 
@@ -40,10 +41,14 @@ export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis>
     },
   });
 
-  const result = await model.generateContent([
-    { text: SYSTEM_PROMPT },
-    { text: `Karakter hikayesi:\n\n${story}` },
-  ]);
+  const result = await withTimeout(
+    model.generateContent([
+      { text: SYSTEM_PROMPT },
+      { text: `Karakter hikayesi:\n\n${story}` },
+    ]),
+    60_000,
+    'Gemini analizi',
+  );
 
   const text = result.response.text();
   return parseAnalysisJson(text);
