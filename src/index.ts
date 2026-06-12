@@ -5,7 +5,8 @@ import { aracLogCommand } from './commands/arac-log.js';
 import { aracYenidenAnalizCommand } from './commands/arac-yeniden-analiz.js';
 import { handleButtonInteraction } from './handlers/buttons.js';
 import { env, getDiscordToken, maskToken } from './env.js';
-import { pingFivemOnStartup } from './services/fivem.js';
+import { pingBridgeOnStartup } from './services/fivem.js';
+import { startApiServer } from './api/server.js';
 
 const commands = [aracalCommand, aracLogCommand, aracYenidenAnalizCommand];
 
@@ -58,6 +59,8 @@ async function registerCommands(token: string, applicationId: string) {
 }
 
 async function main() {
+  startApiServer();
+
   const token = getDiscordToken();
   console.log(`[kingpin-ai-vehicle-bot] Token yuklendi: ${maskToken(token)}`);
 
@@ -93,7 +96,7 @@ async function main() {
     throw err;
   }
 
-  await pingFivemOnStartup();
+  await pingBridgeOnStartup();
 }
 
 main().catch((err) => {

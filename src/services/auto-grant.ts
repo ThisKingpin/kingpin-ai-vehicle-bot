@@ -56,9 +56,6 @@ export async function sendGrantAuditLog(
 export function formatGrantError(err: unknown): string {
   if (err instanceof FivemConnectionError) return err.message;
   if (err instanceof FivemApiError) return err.message;
-  if (err instanceof Error && err.message.includes('fetch failed')) {
-    return 'FiveM sunucusuna baglanilamadi. Railway FIVEM_BASE_URL ve 30120 portunu kontrol edin.';
-  }
   if (err instanceof Error) return err.message;
   return 'Arac verilemedi';
 }

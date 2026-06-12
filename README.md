@@ -44,8 +44,7 @@ Kontrol listesi:
 | `DISCORD_CLIENT_ID` | Opsiyonel (bot token'daki app id otomatik kullanilir) |
 | `GEMINI_API_KEY` | Google Gemini API |
 | `OPENAI_API_KEY` | JSON fallback (opsiyonel ama onerilir) |
-| `AI_VEHICLE_SECRET` | FiveM ile ayni secret |
-| `FIVEM_BASE_URL` | Ornek: `http://SUNUCU_IP:30120` |
+| `AI_VEHICLE_SECRET` | FiveM `ai_vehicle_secret` ile **ayni** |
 | `SERVER_NAME` | Sunucu adi |
 | `LOG_CHANNEL_ID` | Otomatik verme audit log kanali (onerilir) |
 | `STAFF_CHANNEL_ID` | Kullanilmiyor (eski onay akisi kaldirildi) |
@@ -73,6 +72,20 @@ Bot forum konusunun ilk mesajini (ve gerekirse devamini) okur — 12000 karakter
 - `/arac-yeniden-analiz` — Yetkili: yeniden analiz + otomatik ver
 
 Staff onay adimi yok. `LOG_CHANNEL_ID` audit kaydi icin onerilir.
+
+## Pull modu (port acmaya gerek yok)
+
+Bot Railway'de HTTPS API sunar. FiveM **disari cikarak** isleri ceker:
+
+1. Railway deploy → Settings → Networking → public URL
+2. FiveM `server.cfg`:
+   ```
+   set ai_vehicle_bot_url "https://xxx.railway.app"
+   set ai_vehicle_secret "..."
+   ```
+3. `FIVEM_BASE_URL` artik kullanilmiyor
+
+FiveM localhost'ta bile calisir — modemde port acmana gerek yok.
 
 ## Test
 
