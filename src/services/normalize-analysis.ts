@@ -63,18 +63,29 @@ function coerceEnum(value: unknown, allowed: readonly string[], aliases: Record<
   return fallback;
 }
 
+function normalizeStringArray(value: unknown, fallback: string[]): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value) && value.length > 0) return value.map(String);
+  return fallback;
+}
+
+function normalizeFlashiness(value: unknown): number {
+  let flashiness: number;
+  if (typeof value === 'number') {
+    flashiness = value;
+  } else if (typeof value === 'string') {
+    flashiness = Number(value);
+  } else {
+    flashiness = 5;
+  }
+  if (Number.isNaN(flashiness)) flashiness = 5;
+  return Math.min(10, Math.max(1, Math.round(flashiness)));
+}
+
 function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown> {
-  let vibes = raw.dominant_vibes;
-  if (typeof vibes === 'string') vibes = [vibes];
-  if (!Array.isArray(vibes) || vibes.length === 0) vibes = ['practical'];
-
-  let personality = raw.personality;
-  if (typeof personality === 'string') personality = [personality];
-
-  let flashiness = raw.flashiness;
-  if (typeof flashiness === 'string') flashiness = Number(flashiness);
-  if (typeof flashiness !== 'number' || Number.isNaN(flashiness)) flashiness = 5;
-  flashiness = Math.min(10, Math.max(1, Math.round(flashiness)));
+  const vibes = normalizeStringArray(raw.dominant_vibes, ['practical']);
+  const personality = normalizeStringArray(raw.personality, []);
+  const flashiness = normalizeFlashiness(raw.flashiness);
 
   return {
     income_level: coerceEnum(
@@ -109,8 +120,8 @@ function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown>
     ),
     flashiness,
     vehicle_need: typeof raw.vehicle_need === 'string' && raw.vehicle_need.trim() ? raw.vehicle_need.trim() : 'daily transport',
-    dominant_vibes: vibes.map(String),
-    ...(Array.isArray(personality) ? { personality: personality.map(String) } : {}),
+    dominant_vibes: vibes,
+    ...(personality.length > 0 ? { personality } : {}),
   };
 }
 
