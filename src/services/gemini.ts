@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AiAnalysisSchema, type AiAnalysis } from '../types.js';
+import type { AiAnalysis } from '../types.js';
 import { env } from '../env.js';
 import { withTimeout } from '../utils/timeout.js';
+import { parseAnalysisJson } from './normalize-analysis.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
 
@@ -26,6 +27,23 @@ Kurallar:
 - Polis karakter otomatik olarak zengin/sportif profil almamali; hikayeye gore belirle.
 - Suclu karakter otomatik yuksek flashiness almamali.
 - Gercekcilik her zaman onceliklidir.
+
+ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu):
+{
+  "character_profile": {
+    "income_level": "low|lower_mid|mid|upper_mid|high",
+    "origin": "rural|small_town|suburban|urban|unknown",
+    "age_group": "young|adult|middle_aged|old",
+    "job_type": "police|worker|criminal|business|unemployed|mechanic|civilian|other",
+    "lifestyle": "practical|flashy|low_profile|family|criminal|professional|drifter|ambitious",
+    "flashiness": 1,
+    "vehicle_need": "string",
+    "dominant_vibes": ["etiket1", "etiket2"],
+    "personality": ["ozellik1"]
+  },
+  "risk": "low|medium|high",
+  "needs_admin_review": false
+}
 
 Sadece JSON dondur. Baska metin ekleme.`;
 
@@ -89,11 +107,3 @@ export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis>
 
   throw lastError ?? new Error('Gemini analizi basarisiz');
 }
-
-function parseAnalysisJson(raw: string): AiAnalysis {
-  const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  const parsed = JSON.parse(cleaned);
-  return AiAnalysisSchema.parse(parsed);
-}
-
-export { parseAnalysisJson };

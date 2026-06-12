@@ -1,10 +1,11 @@
 import OpenAI from 'openai';
-import { AiAnalysisSchema, type AiAnalysis } from '../types.js';
+import type { AiAnalysis } from '../types.js';
 import { withTimeout } from '../utils/timeout.js';
+import { parseAnalysisJson } from './normalize-analysis.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM RP karakter analiz uzmanisin. Sadece JSON dondur.
-Alanlar: character_profile (income_level, origin, age_group, job_type, lifestyle, flashiness, vehicle_need, dominant_vibes, personality),
-rejected_vehicle_types (opsiyonel), risk, needs_admin_review.
+Zorunlu yapi: { "character_profile": { income_level, origin, age_group, job_type, lifestyle, flashiness, vehicle_need, dominant_vibes, personality }, rejected_vehicle_types?, risk?, needs_admin_review? }
+character_profile sarmalayıcı zorunlu — alanlari kok seviyeye yazma.
 Oyuncunun istedigi araci profili etkilemesin. Gercekcilik oncelikli.`;
 
 export async function analyzeStoryWithOpenAI(story: string): Promise<AiAnalysis> {
@@ -28,8 +29,7 @@ export async function analyzeStoryWithOpenAI(story: string): Promise<AiAnalysis>
 
   const text = response.choices[0]?.message?.content;
   if (!text) throw new Error('OpenAI bos yanit dondurdu');
-  const parsed = JSON.parse(text);
-  return AiAnalysisSchema.parse(parsed);
+  return parseAnalysisJson(text);
 }
 
 export async function analyzeStoryFallback(story: string): Promise<AiAnalysis> {
