@@ -3,10 +3,38 @@ import { analyzeStoryWithGemini } from './gemini.js';
 import { analyzeStoryFallback } from './openai.js';
 import { getCache } from './fivem.js';
 import { loadVehicleCatalog, mergeRecommendations, needsManualReview, rankVehicles } from './scorer.js';
+import { env } from '../env.js';
 import type { AiAnalysis, PendingRequest, ScoredVehicle } from '../types.js';
 
 export function hashStory(story: string): string {
   return createHash('sha256').update(story.trim()).digest('hex');
+}
+
+async function analyzeStory(story: string): Promise<AiAnalysis> {
+  const geminiKey = env('GEMINI_API_KEY');
+  const openaiKey = env('OPENAI_API_KEY');
+
+  if (!geminiKey && !openaiKey) {
+    throw new Error(
+      'AI anahtari eksik. Railway Variables\'a GEMINI_API_KEY ekleyin: https://aistudio.google.com/apikey (OPENAI_API_KEY opsiyonel yedek).',
+    );
+  }
+
+  if (geminiKey) {
+    try {
+      return await analyzeStoryWithGemini(story);
+    } catch (geminiErr) {
+      if (!openaiKey) {
+        const reason = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        throw new Error(
+          `Gemini analizi basarisiz: ${reason}. GEMINI_API_KEY degerini kontrol edin veya yedek icin OPENAI_API_KEY ekleyin.`,
+        );
+      }
+      console.warn('[analysis] Gemini basarisiz, OpenAI fallback kullaniliyor:', geminiErr);
+    }
+  }
+
+  return analyzeStoryFallback(story);
 }
 
 export async function runAnalysis(params: {
@@ -44,11 +72,7 @@ export async function runAnalysis(params: {
   }
 
   let analysis: AiAnalysis;
-  try {
-    analysis = await analyzeStoryWithGemini(params.story);
-  } catch {
-    analysis = await analyzeStoryFallback(params.story);
-  }
+  analysis = await analyzeStory(params.story);
 
   const ranked = mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5));
 

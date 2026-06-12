@@ -61,6 +61,18 @@ async function registerCommands(token: string, applicationId: string) {
 async function main() {
   startApiServer();
 
+  const geminiKey = env('GEMINI_API_KEY');
+  const openaiKey = env('OPENAI_API_KEY');
+  if (!geminiKey && !openaiKey) {
+    console.warn(
+      '[kingpin-ai-vehicle-bot] UYARI: GEMINI_API_KEY ve OPENAI_API_KEY bos — /aracal AI analizi calismaz.',
+    );
+  } else if (geminiKey) {
+    console.log('[kingpin-ai-vehicle-bot] Gemini API anahtari yuklendi.');
+  } else {
+    console.warn('[kingpin-ai-vehicle-bot] GEMINI_API_KEY bos — sadece OpenAI fallback kullanilacak.');
+  }
+
   const token = getDiscordToken();
   console.log(`[kingpin-ai-vehicle-bot] Token yuklendi: ${maskToken(token)}`);
 
