@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "vehicles": [
     {
       "model": "emperor",
@@ -97,7 +97,7 @@
       "label": "Declasse Granger",
       "class": "suv",
       "price_tier": "mid",
-      "vibes": ["rural", "family_man", "practical", "law_enforcement"],
+      "vibes": ["rural", "family_man", "practical", "law_enforcement", "outdoor", "adventurous"],
       "fits_jobs": ["police", "sheriff", "security", "family", "hunter"],
       "fits_personality": ["serious", "disciplined", "mature", "practical"],
       "bad_fits": ["poor", "flashy", "young_racer"],
@@ -279,7 +279,7 @@
       "label": "Canis Seminole",
       "class": "suv",
       "price_tier": "mid",
-      "vibes": ["family_man", "suburban", "practical", "rural"],
+      "vibes": ["family_man", "suburban", "practical", "rural", "outdoor"],
       "fits_jobs": ["civilian", "family", "worker"],
       "fits_personality": ["calm", "mature", "practical"],
       "bad_fits": ["flashy", "street", "racer"],
@@ -293,7 +293,7 @@
       "class": "suv",
       "price_tier": "mid",
       "vibes": ["urban", "family_man", "practical", "professional"],
-      "fits_jobs": ["civilian", "business", "family", "security"],
+      "fits_jobs": ["civilian", "business", "family", "security", "police"],
       "fits_personality": ["mature", "calm", "practical"],
       "bad_fits": ["poor_background", "drifter", "rebellious"],
       "flashiness": 3,

@@ -18,11 +18,14 @@ Karakter hikayesinden su alanlari analiz et:
 - Yasam tarzi (lifestyle)
 - Kisilik (personality dizisi)
 - Gosteris seviyesi (flashiness 1-10)
-- Arac kullanim amaci (vehicle_need)
+- Arac kullanim amaci (vehicle_need) — hikayede gecen kasa tipini ve kullanim amacini yaz (ornek: "suv - kamp, kirsal yol, pratik devriye")
 - Baskin vibe etiketleri (dominant_vibes)
 
 Kurallar:
 - Oyuncunun hikayede acikca istedigi araci (ornegin lambo) profili etkilemesin; sadece gercekci hikaye icerigini analiz et.
+- Hikayede SUV/pickup/sedan tercihi aciksa vehicle_need icinde kasa tipini belirt (suv, pickup, sedan).
+- Kirsal koken + kamp/balik/uzun yol + pratik arac = vehicle_need'de "suv" veya "pickup" kullan.
+- Polis karakter otomatik sedan almaz; hikayede SUV/pickup varsa onu yansit.
 - Kasabadan gelen dusuk gelirli karakter flashiness 1-3 olmali.
 - Polis karakter otomatik olarak zengin/sportif profil almamali; hikayeye gore belirle.
 - Suclu karakter otomatik yuksek flashiness almamali.
@@ -37,7 +40,7 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
     "job_type": "police|worker|criminal|business|unemployed|mechanic|civilian|other",
     "lifestyle": "practical|flashy|low_profile|family|criminal|professional|drifter|ambitious",
     "flashiness": 1,
-    "vehicle_need": "string",
+    "vehicle_need": "suv - kamp ve kirsal yolculuk",
     "dominant_vibes": ["etiket1", "etiket2"],
     "personality": ["ozellik1"]
   },

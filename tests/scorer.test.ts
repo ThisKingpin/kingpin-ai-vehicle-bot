@@ -29,6 +29,18 @@ const urbanPolice: CharacterProfile = {
   personality: ['ambitious', 'modern'],
 };
 
+const ethanCole: CharacterProfile = {
+  income_level: 'mid',
+  origin: 'rural',
+  age_group: 'adult',
+  job_type: 'police',
+  lifestyle: 'professional',
+  flashiness: 3,
+  vehicle_need: 'suv - kamp, balik, Blaine County yolculuklari, pratik sivil arac',
+  dominant_vibes: ['rural', 'law_enforcement', 'practical', 'disciplined', 'low_profile'],
+  personality: ['disciplined', 'calm', 'serious'],
+};
+
 describe('scoreVehicle', () => {
   it('whitelist araclari skorlar', () => {
     const catalog = loadVehicleCatalog();
@@ -46,6 +58,18 @@ describe('scoreVehicle', () => {
 });
 
 describe('rankVehicles', () => {
+  it('kirsal polis SUV hikayesinde sedan yerine SUV onceliklidir', () => {
+    const top = rankVehicles(ethanCole, 3);
+    const topModel = top[0].vehicle;
+    const catalog = loadVehicleCatalog();
+    const topClass = catalog.vehicles.find((v) => v.model === topModel)?.class;
+    assert.ok(
+      topClass === 'suv' || topClass === 'pickup',
+      `Beklenen SUV/pickup, alinan: ${topModel} (${topClass})`,
+    );
+    assert.notEqual(topModel, 'stanier');
+  });
+
   it('ayni meslek farkli profiller farkli top-1 arac', () => {
     const ruralTop = rankVehicles(ruralPolice, 1)[0].vehicle;
     const urbanTop = rankVehicles(urbanPolice, 1)[0].vehicle;

@@ -33,6 +33,55 @@ const JOB_ALIASES: Record<string, string[]> = {
   other: ['civilian', 'worker'],
 };
 
+/** Maps catalog `class` values to preference buckets */
+const CLASS_GROUPS: Record<string, string[]> = {
+  suv: ['suv'],
+  sedan: ['sedan', 'old_sedan'],
+  pickup: ['pickup'],
+  van: ['van'],
+  offroad: ['offroad', 'pickup', 'suv'],
+  muscle: ['muscle'],
+  sports: ['sports'],
+};
+
+const BODY_TYPE_KEYWORDS: Record<string, string[]> = {
+  suv: ['suv', 'crossover', 'explorer', 'jeep', 'arazi', 'kamp', 'offroad', '4x4', 'uzun yol', 'balik', 'balık'],
+  pickup: ['pickup', 'kamyonet', 'truck', 'pikap'],
+  sedan: ['sedan', 'saloon', 'limuzin'],
+  van: ['minivan', 'van', 'minibüs', 'minibus'],
+  offroad: ['offroad', 'arazi', 'trail', 'dirt'],
+};
+
+function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
+  const text = `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')}`.toLowerCase();
+  const preferred = new Set<string>();
+
+  for (const [bodyClass, keywords] of Object.entries(BODY_TYPE_KEYWORDS)) {
+    if (keywords.some((keyword) => text.includes(keyword))) {
+      preferred.add(bodyClass);
+    }
+  }
+
+  if (profile.origin === 'rural' && profile.lifestyle !== 'flashy') {
+    preferred.add('suv');
+    preferred.add('pickup');
+  }
+
+  return [...preferred];
+}
+
+function bodyClassMatchesPreference(vehicleClass: string, preferred: string[]): boolean {
+  if (preferred.length === 0) return false;
+  return preferred.some((pref) => (CLASS_GROUPS[pref] ?? [pref]).includes(vehicleClass));
+}
+
+function bodyClassConflictsPreference(vehicleClass: string, preferred: string[]): boolean {
+  if (preferred.length === 0) return false;
+  const wantsSuvOrTruck = preferred.some((p) => p === 'suv' || p === 'pickup' || p === 'offroad');
+  if (!wantsSuvOrTruck) return false;
+  return vehicleClass === 'sedan' || vehicleClass === 'old_sedan' || vehicleClass === 'sports';
+}
+
 function overlapCount(a: string[], b: string[]): number {
   const setB = new Set(b.map((x) => x.toLowerCase()));
   return a.filter((x) => setB.has(x.toLowerCase())).length;
@@ -47,6 +96,10 @@ function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: nu
 }
 
 export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  return Math.max(0, Math.min(100, scoreVehicleRaw(profile, vehicle)));
+}
+
+export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry): number {
   let score = 0;
 
   const vibeOverlap = overlapCount(profile.dominant_vibes, vehicle.vibes);
@@ -83,24 +136,32 @@ export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): 
     score -= 10;
   }
 
-  return Math.max(0, Math.min(100, score));
+  const preferredBodies = inferPreferredBodyClasses(profile);
+  if (bodyClassMatchesPreference(vehicle.class, preferredBodies)) {
+    score += 35;
+  } else if (bodyClassConflictsPreference(vehicle.class, preferredBodies)) {
+    score -= 30;
+  }
+
+  return Math.max(0, score);
 }
 
 export function rankVehicles(profile: CharacterProfile, limit = 5): ScoredVehicle[] {
   const { vehicles } = loadVehicleCatalog();
   const scored = vehicles
     .map((vehicle) => {
-      const score = scoreVehicle(profile, vehicle);
+      const rawScore = scoreVehicleRaw(profile, vehicle);
       return {
         vehicle: vehicle.model,
         label: vehicle.label,
-        score: Math.round(score),
-        reason: buildReason(profile, vehicle, score),
+        rawScore,
+        score: Math.round(Math.min(100, rawScore)),
+        reason: buildReason(profile, vehicle, Math.min(100, rawScore)),
       };
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.rawScore - a.rawScore);
 
-  return scored.slice(0, limit);
+  return scored.slice(0, limit).map(({ rawScore: _raw, ...item }) => item);
 }
 
 export function mergeRecommendations(
