@@ -49,7 +49,7 @@ export function enqueueJob(type: string, payload: Record<string, unknown>): stri
 export function pullNextJob(): JobRecord | null {
   purgeStaleJobs();
   for (const job of jobs.values()) {
-    if job.status === 'pending') {
+    if (job.status === 'pending') {
       job.status = 'processing';
       return job;
     }
