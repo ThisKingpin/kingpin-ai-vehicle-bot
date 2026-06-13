@@ -62,7 +62,7 @@ const PURPOSE_KEYWORDS: Record<string, string[]> = {
   equipment_transport: ['ekipman', 'malzeme', 'parça', 'parca', 'ses sistemi', 'subwoofer', 'kaplama', 'folyo', 'alet', 'takım', 'takim', 'tesisat', 'elektrik', 'inşaat', 'insaat'],
   work: [' iş ', ' is ', 'işi', 'isi', 'işinde', 'isinde', 'çalışıyor', 'calisiyor', 'kasiyer', 'tamirci', 'kurye', 'kargo', 'depo', 'servis', 'esnaf', 'tesisat', 'elektrik', 'inşaat', 'insaat'],
   daily_commute: ['günlük', 'gunluk', 'işe gidip', 'ise gidip', 'okula', 'şehir içi', 'sehir ici', 'yakıt', 'yakit', 'ekonomik', 'ilk araç', 'ilk arac'],
-  family: ['aile', 'çocuk', 'cocuk', 'anne', 'baba', 'kardeş', 'kardes', 'eşya', 'esya'],
+  family: ['aile', 'çocuk', 'cocuk', 'kardeş', 'kardes', 'eşya', 'esya', 'family'],
   recreation: ['kamp', 'balık', 'balik', 'av', 'sahil', 'hafta sonu', 'doğa', 'doga'],
   project: ['garaj', 'proje', 'modifiye', 'restore', 'restorasyon', 'motor toplama'],
   status: ['statü', 'statu', 'prestij', 'lüks', 'luks', 'gösteriş', 'gosteris'],
@@ -82,6 +82,8 @@ const PURPOSE_TAGS: Record<string, string[]> = {
 const HOBBY_ONLY_KEYWORDS = ['basketbol', 'basketball', 'futbol', 'spor', 'music', 'müzik', 'muzik', 'dans'];
 const VEHICLE_SKILL_KEYWORDS = ['garaj', 'kaplama', 'ses sistemi', 'tamir', 'mekanik', 'modifiye', 'parça', 'parca'];
 const PERFORMANCE_VIBES = ['racer', 'street_meet', 'entry_tuner', 'powerful', 'flashy', 'high_status'];
+const URBAN_CUSTOMS_KEYWORDS = ['chamberlain', 'south ls', 'los santos', 'şehir', 'sehir', 'mahalle', 'ses sistemi', 'kaplama', 'wrap', 'folyo', 'müşteri', 'musteri'];
+const RURAL_SCRAP_KEYWORDS = ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'hurda', 'hurdacı', 'hurdaci', 'scrap', 'scrapper', 'çiftçi', 'ciftci', 'tarla', 'kaynak', 'çekici', 'cekici'];
 
 const REGION_KEYWORDS: Record<string, string[]> = {
   rural: ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'kasaba', 'kırsal', 'kirsal', 'çiftçi', 'ciftci'],
@@ -148,6 +150,20 @@ function keywordHit(text: string, keywords: string[]): boolean {
   return keywords.some((keyword) => text.includes(keyword));
 }
 
+function isUrbanCustomsProfile(profile: CharacterProfile): boolean {
+  const text = profileSearchText(profile);
+  return profile.origin === 'urban'
+    && keywordHit(text, URBAN_CUSTOMS_KEYWORDS)
+    && keywordHit(text, ['garaj', 'kaplama', 'ses sistemi', 'tamir', 'mekanik', 'parça', 'parca']);
+}
+
+function isRuralScrapProfile(profile: CharacterProfile): boolean {
+  const text = profileSearchText(profile);
+  return profile.origin === 'rural'
+    || keywordHit(text, RURAL_SCRAP_KEYWORDS)
+    || profile.dominant_vibes.some((v) => ['rural', 'sandy_shores', 'scrapper', 'farmer', 'miner'].includes(v));
+}
+
 function inferVehiclePurposes(profile: CharacterProfile): string[] {
   const text = profileSearchText(profile);
   const purposes = new Set<string>();
@@ -184,7 +200,8 @@ function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number 
     if (hasUtilityTag(vehicle, tags)) score += 45;
 
     if (purpose === 'equipment_transport') {
-      if (vehicle.class === 'van' || vehicle.class === 'pickup' || vehicle.class === 'offroad') score += 25;
+      if (vehicle.class === 'van' || vehicle.class === 'pickup') score += 25;
+      if (vehicle.class === 'offroad') score += isRuralScrapProfile(profile) ? 25 : -30;
       if (vehicle.class === 'sports' || vehicle.flashiness >= 5) score -= 55;
       if (vehicle.class === 'compact' || vehicle.class === 'bmx' || vehicle.class === 'motorcycle') score -= 20;
     }
@@ -200,8 +217,19 @@ function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number 
     }
 
     if (purpose === 'work') {
-      if (vehicle.class === 'van' || vehicle.class === 'offroad' || hasUtilityTag(vehicle, ['work_truck', 'service_vehicle', 'fleet_vehicle'])) score += 20;
+      if (vehicle.class === 'van' || hasUtilityTag(vehicle, ['work_truck', 'service_vehicle', 'fleet_vehicle'])) score += 20;
+      if (vehicle.class === 'offroad') score += isRuralScrapProfile(profile) ? 20 : -20;
       if (vehicle.flashiness >= 5) score -= 30;
+    }
+  }
+
+  if (isUrbanCustomsProfile(profile)) {
+    if (vehicle.model === 'dloader' || vehicle.vibes.some((v) => ['scrapper', 'miner', 'farmer', 'workhorse', 'sandy_shores', 'desert'].includes(v))) {
+      score -= 90;
+    }
+    if (vehicle.vibes.some((v) => ['urban', 'entry_tuner', 'modding', 'street', 'clean_look'].includes(v))
+      || hasUtilityTag(vehicle, ['project_car', 'daily_driver', 'service_vehicle', 'equipment_transport'])) {
+      score += 35;
     }
   }
 

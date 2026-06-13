@@ -297,16 +297,36 @@ describe('rankVehicles', () => {
       financial_pressure: 'medium',
       family_support: 'limited',
       vehicle_purpose: 'equipment_transport',
-      vehicle_need: 'South LS working-class aile, ses sistemi ve kaplama isi ogreniyor, parca ve ekipman tasimasi lazim',
-      dominant_vibes: ['working_class', 'practical', 'service', 'equipment_transport'],
+      vehicle_need: 'Chamberlain South LS sehir cocugu, babasinin garajinda ses sistemi ve kaplama isi ogreniyor, mahalle musterilerine hizmet veriyor, parca ve ekipman tasimasi lazim',
+      dominant_vibes: ['working_class', 'urban', 'practical', 'service', 'equipment_transport', 'car_audio', 'wrap'],
       personality: ['hardworking', 'ambitious', 'practical'],
     });
+    const topThree = rankVehicles(lorenzo, 3);
     const { top, entry } = topVehicleEntry(lorenzo);
     assert.ok(
       top.vehicle === 'bobcatxl'
         || entry?.utility_tags?.some((tag) => ['equipment_transport', 'service_vehicle', 'utility_pickup', 'cargo_van'].includes(tag)),
       top.vehicle,
     );
+    assert.ok(!topThree.some((item) => item.vehicle === 'dloader'), topThree.map((item) => item.vehicle).join(', '));
+  });
+
+  it('Duneloader sadece rural hurda/Blaine County profilinde ilk 3e girer', () => {
+    const scrapWorker = profile({
+      age: 24,
+      age_group: 'adult',
+      income_level: 'lower_mid',
+      origin: 'rural',
+      job_type: 'mechanic',
+      career_stage: 'stable_worker',
+      life_stage: 'early_career',
+      vehicle_purpose: 'equipment_transport',
+      vehicle_need: 'Blaine County ve Sandy Shores civarinda babasi hurda sahasi isletiyor, kaynak cekici motor tamiri ve hurda parca tasima isi',
+      dominant_vibes: ['rural', 'sandy_shores', 'scrapper', 'mechanic', 'workhorse'],
+      personality: ['hardworking', 'rough', 'practical'],
+    });
+    const topThree = rankVehicles(scrapWorker, 3).map((item) => item.vehicle);
+    assert.ok(topThree.includes('dloader'), topThree.join(', '));
   });
 
   it('South LS ama sucsuz working-class aile lowrider/muscle otomatik almaz', () => {

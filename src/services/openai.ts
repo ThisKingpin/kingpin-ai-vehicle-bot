@@ -10,6 +10,8 @@ Oyuncunun istedigi araci profili etkilemesin. Ekonomik gercekcilik vibe'dan once
 "Arabalari seviyor" tek basina pahali JDM/sports/muscle sinyali degildir.
 Hobi ile meslegi ayir: basketbol/spor/muzik arac secimini belirlemez; garaj, kaplama, ses sistemi, ekipman tasima ve tamir isi belirler.
 South LS/mahalle gecmisi tek basina lowrider/muscle/suclu anlamina gelmez; aile calisan ve suc gecmisi yoksa working_class/practical oku.
+Chamberlain/South LS/Los Santos + babasinin garaji + ses sistemi/kaplama/mahalle musterisi = sehirli customs/service profili; Sandy Shores/Grapeseed/Blaine County hurda/ciftci/offroad profili gibi okuma.
+Duneloader tarzı kirsal hurda/workhorse sinyali sadece hurda sahasi, kaynak, cekici, ciftcilik, Blaine County, Sandy Shores, Grapeseed veya kirsal parca tasima aciksa mantiklidir.
 Dusuk gelir + ogrenci/yeni isci/kasiyer/kurye/yeni tamirci icin first_vehicle/early_career ve pratik arac sinyali ver.
 Ses sistemi, kaplama, tesisat, insaat, kargo veya ekipman tasima varsa vehicle_purpose equipment_transport/work olsun.`;
 
