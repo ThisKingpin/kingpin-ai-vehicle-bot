@@ -5,8 +5,9 @@ import {
   EmbedBuilder,
   type APIEmbedField,
 } from 'discord.js';
-import type { AiAnalysis, PendingRequest, ScoredVehicle } from '../types.js';
+import type { PendingRequest, ScoredVehicle } from '../types.js';
 import { getReviewFlag } from '../services/analysis.js';
+import { applyVehicleImage } from '../services/vehicle-image.js';
 
 function formatActor(adminId?: string): string {
   if (!adminId) return '-';
@@ -116,7 +117,7 @@ export function buildPlayerGrantedEmbed(
           .join('\n')
       : '';
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle('Araciniz verildi')
     .setDescription(
       `**${characterName}** icin hikayeniz analiz edildi ve araciniz garajiniza eklendi.\n\n` +
@@ -127,6 +128,9 @@ export function buildPlayerGrantedEmbed(
     )
     .setColor(0x2ecc71)
     .setTimestamp();
+
+  applyVehicleImage(embed, granted.model);
+  return embed;
 }
 
 /** @deprecated Staff onay akisi kaldirildi; sadece log/audit icin */
@@ -152,7 +156,7 @@ export function buildAuditEmbed(
   grant: { label: string; model: string; garage: string },
 ): EmbedBuilder {
   const profile = pending.analysis.character_profile;
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle('AI Otomatik Arac Verildi')
     .setColor(0x2ecc71)
     .addFields(
@@ -169,6 +173,9 @@ export function buildAuditEmbed(
     )
     .setFooter({ text: pending.requestId })
     .setTimestamp();
+
+  applyVehicleImage(embed, grant.model);
+  return embed;
 }
 
 export function buildLogEmbed(

@@ -5,6 +5,7 @@ import {
 } from 'discord.js';
 import { runAnalysis } from '../services/analysis.js';
 import { adminRegrantTopVehicle, formatGrantError, sendGrantAuditLog } from '../services/auto-grant.js';
+import { buildPlayerGrantedEmbed } from '../embeds/staff.js';
 import { resolveStoryText, StoryFetchError, STORY_MAX } from '../services/story-fetch.js';
 
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
@@ -86,17 +87,27 @@ export const aracYenidenAnalizCommand = {
           ? ` (${story.length} karakter, max ${STORY_MAX})`
           : '';
 
+      const top = pending.recommendations[0];
+      const embed = buildPlayerGrantedEmbed(
+        pending.characterName,
+        {
+          label: granted.label,
+          model: granted.model,
+          garage: granted.garage,
+          score: top?.score ?? 0,
+          reason: top?.reason ?? '',
+        },
+        pending.recommendations,
+      );
+      embed.setFooter({ text: `Kaynak: ${source}` });
+
       const replacedNote = granted.replaced
-        ? 'Onceki AI araci garajdan silindi.\n'
-        : 'Onceki AI araci bulunamadi (sadece kayitlar sifirlandi).\n';
+        ? 'Onceki AI araci garajdan silindi.'
+        : 'Onceki AI araci bulunamadi (sadece kayitlar sifirlandi).';
 
       await interaction.editReply({
-        content:
-          replacedNote +
-          `Yeniden analiz ve otomatik verme tamamlandi.\n` +
-          `**${granted.label}** → ${granted.garage}\n` +
-          `Kaynak: \`${source}\`${sourceNote}\n` +
-          `Request: \`${pending.requestId}\``,
+        content: `${replacedNote}\nRequest: \`${pending.requestId}\`${sourceNote}`,
+        embeds: [embed],
       });
     } catch (err) {
       const msg = err instanceof StoryFetchError ? err.message : formatGrantError(err);
