@@ -192,7 +192,6 @@ function inferVehiclePurposes(profile: CharacterProfile): string[] {
     purposes.add('daily_commute');
   }
   if (profile.career_stage === 'new_worker') {
-    purposes.add('work');
     purposes.add('daily_commute');
   }
   if (profile.lifestyle === 'family') purposes.add('family');
@@ -345,14 +344,14 @@ function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: nu
   );
   const reasons: string[] = [];
   const purposes = inferVehiclePurposes(profile);
-  if (purposes.includes('equipment_transport')) reasons.push('ekipman/parca tasima ihtiyacina uygun');
-  if (purposes.includes('work')) reasons.push('is odakli kullanim icin mantikli');
-  if (purposes.includes('daily_commute')) reasons.push('gunluk kullanim ve ekonomiyle uyumlu');
-  if (purposes.includes('family')) reasons.push('aile/eşya kullanimi icin pratik');
+  if (purposes.includes('equipment_transport')) reasons.push('ekipman/parca tasimaya uygun');
+  if (purposes.includes('work')) reasons.push('is kullanimi icin mantikli');
+  if (purposes.includes('daily_commute')) reasons.push('gunluk kullanim ve yakit ekonomisine uygun');
+  if (purposes.includes('family')) reasons.push('aile/esya kullanimi icin pratik');
   if (profile.income_level === 'low' || profile.income_level === 'lower_mid') reasons.push(`${profile.income_level} gelir seviyesini zorlamaz`);
-  if (profile.life_stage === 'first_vehicle' || profile.life_stage === 'early_career') reasons.push('yasam evresi icin abartisiz');
-  if (shared.length > 0) reasons.push(`${shared.join(', ')} sinyalleriyle uyumlu`);
-  if (reasons.length === 0) reasons.push(`${profile.lifestyle} profiline uyumlu`);
+  if (profile.life_stage === 'first_vehicle' || profile.life_stage === 'early_career') reasons.push('karakterin mevcut yasam evresine uygun');
+  if (shared.length > 0) reasons.push(`${shared.join(', ')} hikaye sinyalleriyle uyumlu`);
+  if (reasons.length === 0) reasons.push(`${profile.lifestyle} karakter profiline uyumlu`);
   const ageText = profile.age !== undefined ? ` Yas: ${profile.age}.` : '';
   return `${vehicle.label}: ${Math.round(score)} puan. ${vehicle.class} / ${vehicle.price_tier} segment.${ageText} Sebepler: ${reasons.slice(0, 5).join('; ')}.`;
 }

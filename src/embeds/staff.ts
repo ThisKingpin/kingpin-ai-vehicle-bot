@@ -106,10 +106,24 @@ export function buildRecommendationButtons(pending: PendingRequest): ActionRowBu
 function humanizeReason(reason: string): string {
   return reason
     .replace(/\blower_mid\b/g, 'orta-alt')
-    .replace(/\blow\b/g, 'dusuk')
+    .replace(/\blow\b/g, 'düşük')
     .replace(/\bmid\b/g, 'orta')
-    .replace(/\bequipment\/parca\b/g, 'ekipman/parca')
-    .replace(/\bis odakli\b/g, 'is odakli')
+    .replace(/parca/g, 'parça')
+    .replace(/tasima/g, 'taşıma')
+    .replace(/tasin/g, 'taşın')
+    .replace(/is kullanimi/g, 'iş kullanımı')
+    .replace(/is odakli/g, 'iş odaklı')
+    .replace(/gunluk/g, 'günlük')
+    .replace(/yakit/g, 'yakıt')
+    .replace(/kullanim/g, 'kullanım')
+    .replace(/seviyesini/g, 'seviyesini')
+    .replace(/zorlamaz/g, 'zorlamaz')
+    .replace(/yasam/g, 'yaşam')
+    .replace(/evresine/g, 'evresine')
+    .replace(/hikaye/g, 'hikaye')
+    .replace(/sinyalleriyle/g, 'detaylarıyla')
+    .replace(/uyumlu/g, 'uyumlu')
+    .replace(/esya/g, 'eşya')
     .trim();
 }
 
@@ -138,15 +152,15 @@ export function buildPlayerGrantedEmbed(
   const reasons = formatPlayerReasons(granted.reason);
 
   const embed = new EmbedBuilder()
-    .setTitle('Araciniz verildi')
+    .setTitle('Araç Teslim Edildi')
     .setDescription(
-      `**${characterName}** icin karakter hikayenize en uygun arac garajiniza eklendi.`,
+      `**${characterName}** için karakter hikayenize uygun araç garajınıza eklendi.`,
     )
-    .setColor(0x2ecc71)
+    .setColor(0x8b1e1e)
     .addFields(
-      { name: 'Verilen arac', value: `**${granted.label}**`, inline: false },
-      { name: 'Neden bu arac?', value: reasons, inline: false },
+      { name: 'Araç', value: `**${granted.label}**`, inline: true },
       { name: 'Garaj', value: `**${granted.garage}**`, inline: true },
+      { name: 'Başlıca sebepler', value: reasons, inline: false },
     )
     .setTimestamp();
 

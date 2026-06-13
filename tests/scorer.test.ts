@@ -402,6 +402,23 @@ describe('rankVehicles', () => {
     assert.ok(entry?.utility_tags?.some((tag) => ['starter_car', 'daily_driver', 'fuel_economy'].includes(tag)), top.vehicle);
     assert.ok(top.reason.includes('Sebepler:'), top.reason);
   });
+
+  it('hikayede is amaci yoksa yeni calisan sebebi is odakli yazmaz', () => {
+    const earlyCareer = profile({
+      age: 21,
+      age_group: 'young',
+      income_level: 'lower_mid',
+      career_stage: 'new_worker',
+      life_stage: 'early_career',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'sehir ici gunluk ulasim, okul ve sosyal hayat icin ekonomik arac',
+      dominant_vibes: ['urban', 'practical', 'starter_car'],
+      personality: ['calm', 'practical'],
+    });
+    const top = rankVehicles(earlyCareer, 1)[0];
+    assert.ok(!top.reason.includes('is kullanimi'), top.reason);
+    assert.ok(!top.reason.includes('is odakli'), top.reason);
+  });
 });
 
 describe('diversifyCloseRecommendations', () => {
