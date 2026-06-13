@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "vehicles": [
     {
       "model": "emperor",
@@ -12,6 +12,7 @@
       "fits_jobs": ["police", "government", "municipal", "security", "civilian", "worker", "retired"],
       "fits_personality": ["disciplined", "modest", "quiet", "mature", "reliable", "serious"],
       "bad_fits": ["flashy", "racer", "rich", "young_racer", "offroad"],
+      "utility_tags": ["daily_driver", "fleet_vehicle", "family_vehicle"],
       "flashiness": 1,
       "attention_level": 1,
       "realism_score": 9
@@ -27,6 +28,7 @@
       "fits_jobs": ["farmer", "mechanic", "worker", "retired", "civilian"],
       "fits_personality": ["modest", "calm", "practical", "sentimental", "family_oriented"],
       "bad_fits": ["flashy", "racer", "urban_elite", "high_status"],
+      "utility_tags": ["family_vehicle", "daily_driver", "starter_car"],
       "flashiness": 1,
       "attention_level": 1,
       "realism_score": 10
@@ -42,6 +44,7 @@
       "fits_jobs": ["taxi", "delivery", "warehouse", "worker", "civilian", "unemployed"],
       "fits_personality": ["modest", "practical", "calm", "street_smart"],
       "bad_fits": ["rich", "flashy", "racer", "rural"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 8
@@ -57,6 +60,7 @@
       "fits_jobs": ["family", "teacher", "worker", "civilian", "business"],
       "fits_personality": ["calm", "practical", "mature", "family_oriented"],
       "bad_fits": ["flashy", "racer", "criminal_low_profile"],
+      "utility_tags": ["family_vehicle", "daily_driver", "equipment_transport"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 9
@@ -72,6 +76,7 @@
       "fits_jobs": ["student", "mechanic", "delivery", "civilian", "worker"],
       "fits_personality": ["ambitious", "car_enthusiast", "social", "young"],
       "bad_fits": ["old_school", "official", "family_man", "rich"],
+      "utility_tags": ["project_car", "weekend_car", "daily_driver"],
       "flashiness": 3,
       "attention_level": 3,
       "realism_score": 8
@@ -87,6 +92,7 @@
       "fits_jobs": ["police", "security", "government", "municipal", "civilian", "criminal"],
       "fits_personality": ["disciplined", "serious", "mature", "practical", "tough"],
       "bad_fits": ["flashy", "racer", "criminal_low_profile", "offroad"],
+      "utility_tags": ["fleet_vehicle", "daily_driver", "service_vehicle"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 9
@@ -102,6 +108,7 @@
       "fits_jobs": ["student", "office", "worker", "civilian", "business", "criminal"],
       "fits_personality": ["ambitious", "practical", "modest", "new_graduate"],
       "bad_fits": ["rich", "flashy", "rural", "old_school"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 8
@@ -117,6 +124,7 @@
       "fits_jobs": ["student", "courier", "delivery", "worker", "civilian"],
       "fits_personality": ["young", "practical", "energetic", "budget"],
       "bad_fits": ["family_man", "official", "rich", "offroad"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 8
@@ -132,6 +140,7 @@
       "fits_jobs": ["teacher", "student", "office", "civilian", "worker"],
       "fits_personality": ["fun", "modest", "economical", "urban"],
       "bad_fits": ["tough", "criminal", "offroad", "family_man"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 3,
       "attention_level": 3,
       "realism_score": 8
@@ -147,6 +156,7 @@
       "fits_jobs": ["student", "mechanic", "delivery", "civilian"],
       "fits_personality": ["car_enthusiast", "social", "ambitious", "reckless"],
       "bad_fits": ["official", "family_man", "old_school", "rural"],
+      "utility_tags": ["project_car", "weekend_car", "starter_car"],
       "flashiness": 4,
       "attention_level": 4,
       "realism_score": 7
@@ -162,6 +172,7 @@
       "fits_jobs": ["office", "business", "teacher", "civilian", "student"],
       "fits_personality": ["environmentalist", "tech_savvy", "calm", "practical"],
       "bad_fits": ["racer", "criminal", "old_school", "tough"],
+      "utility_tags": ["daily_driver", "fuel_economy", "fleet_vehicle"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 8
@@ -177,6 +188,7 @@
       "fits_jobs": ["student", "worker", "delivery", "civilian", "unemployed"],
       "fits_personality": ["modest", "quirky", "sentimental", "young"],
       "bad_fits": ["rich", "official", "family_man", "flashy"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 8
@@ -192,6 +204,7 @@
       "fits_jobs": ["collector", "mechanic", "civilian", "old_school_gang"],
       "fits_personality": ["old_school", "loyal", "street_smart", "proud"],
       "bad_fits": ["law_enforcement", "white_collar", "eco", "family_man", "modern_gang", "rich_criminal", "clean_look"],
+      "utility_tags": ["weekend_car", "project_car"],
       "flashiness": 4,
       "attention_level": 4,
       "realism_score": 8
@@ -207,6 +220,7 @@
       "fits_jobs": ["worker", "mechanic", "civilian", "retired"],
       "fits_personality": ["mature", "sentimental", "old_school", "calm", "serious"],
       "bad_fits": ["young_racer", "eco", "official", "poor_background"],
+      "utility_tags": ["weekend_car", "project_car", "daily_driver"],
       "flashiness": 4,
       "attention_level": 4,
       "realism_score": 8
@@ -222,6 +236,7 @@
       "fits_jobs": ["mechanic", "criminal", "civilian"],
       "fits_personality": ["bold", "reckless", "car_enthusiast", "competitive", "tough"],
       "bad_fits": ["low_profile", "official", "family_man", "eco"],
+      "utility_tags": ["weekend_car", "project_car", "status_vehicle"],
       "flashiness": 6,
       "attention_level": 5,
       "realism_score": 6
@@ -237,6 +252,7 @@
       "fits_jobs": ["farmer", "mechanic", "construction", "worker", "small_business", "civilian"],
       "fits_personality": ["practical", "hardworking", "tough", "modest"],
       "bad_fits": ["white_collar", "eco", "rich", "high_status"],
+      "utility_tags": ["utility_pickup", "work_truck", "service_vehicle", "project_car"],
       "flashiness": 3,
       "attention_level": 3,
       "realism_score": 9
@@ -252,6 +268,7 @@
       "fits_jobs": ["family", "teacher", "worker", "civilian", "security", "criminal"],
       "fits_personality": ["calm", "mature", "practical", "family_oriented"],
       "bad_fits": ["racer", "flashy", "street", "poor_background"],
+      "utility_tags": ["family_vehicle", "daily_driver", "recreation"],
       "flashiness": 2,
       "attention_level": 3,
       "realism_score": 9
@@ -267,6 +284,7 @@
       "fits_jobs": ["hunter", "farmer", "worker", "civilian", "security", "criminal"],
       "fits_personality": ["outdoorsman", "practical", "tough", "independent"],
       "bad_fits": ["white_collar", "racer", "flashy", "eco"],
+      "utility_tags": ["family_vehicle", "utility_pickup", "recreation"],
       "flashiness": 3,
       "attention_level": 3,
       "realism_score": 9
@@ -282,6 +300,7 @@
       "fits_jobs": ["civilian", "artist", "student", "unemployed"],
       "fits_personality": ["free_spirit", "relaxed", "quirky", "social"],
       "bad_fits": ["official", "high_status", "law_enforcement", "corporate"],
+      "utility_tags": ["weekend_car", "recreation", "daily_driver"],
       "flashiness": 2,
       "attention_level": 3,
       "realism_score": 8
@@ -297,6 +316,7 @@
       "fits_jobs": ["delivery", "courier", "small_business", "mechanic", "worker"],
       "fits_personality": ["hardworking", "practical", "reliable", "modest"],
       "bad_fits": ["racer", "flashy", "rich", "student"],
+      "utility_tags": ["cargo_van", "service_vehicle", "fleet_vehicle", "equipment_transport"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 10
@@ -312,6 +332,7 @@
       "fits_jobs": ["traveler", "unemployed", "civilian", "artist"],
       "fits_personality": ["free_spirit", "isolated", "nomadic", "resourceful"],
       "bad_fits": ["official", "corporate", "rich", "law_enforcement"],
+      "utility_tags": ["family_vehicle", "recreation", "weekend_car"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 9
@@ -327,6 +348,7 @@
       "fits_jobs": ["construction", "plumber", "electrician", "small_business", "mechanic", "worker"],
       "fits_personality": ["hardworking", "practical", "modest", "reliable"],
       "bad_fits": ["flashy", "racer", "rich", "white_collar"],
+      "utility_tags": ["contractor_vehicle", "service_vehicle", "utility_pickup", "equipment_transport", "work_truck"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 9
@@ -342,6 +364,7 @@
       "fits_jobs": ["courier", "delivery", "student", "worker", "civilian"],
       "fits_personality": ["modest", "young", "practical", "budget"],
       "bad_fits": ["family_man", "official", "rural", "rich"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy", "delivery_vehicle"],
       "flashiness": 1,
       "attention_level": 2,
       "realism_score": 8
@@ -357,6 +380,7 @@
       "fits_jobs": ["hunter", "criminal", "worker", "civilian", "farmer"],
       "fits_personality": ["adventurous", "tough", "independent", "reckless"],
       "bad_fits": ["family_man", "corporate", "official", "city_only"],
+      "utility_tags": ["recreation", "utility_pickup", "weekend_car"],
       "flashiness": 3,
       "attention_level": 4,
       "realism_score": 7
@@ -372,6 +396,7 @@
       "fits_jobs": ["scrapper", "miner", "farmer", "worker", "mechanic"],
       "fits_personality": ["hardworking", "rough", "practical", "old_school"],
       "bad_fits": ["urban_elite", "corporate", "flashy", "rich"],
+      "utility_tags": ["work_truck", "utility_pickup", "service_vehicle"],
       "flashiness": 1,
       "attention_level": 3,
       "realism_score": 9
@@ -387,6 +412,7 @@
       "fits_jobs": ["hunter", "scrapper", "mechanic", "farmer", "criminal", "worker"],
       "fits_personality": ["tough", "resourceful", "rebellious", "practical"],
       "bad_fits": ["official", "corporate", "rich", "family_man"],
+      "utility_tags": ["work_truck", "utility_pickup", "project_car"],
       "flashiness": 2,
       "attention_level": 3,
       "realism_score": 9
@@ -402,6 +428,7 @@
       "fits_jobs": ["student", "unemployed", "civilian"],
       "fits_personality": ["relaxed", "young", "budget", "active"],
       "bad_fits": ["official", "family_man", "criminal", "rich"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 1,
       "attention_level": 1,
       "realism_score": 8
@@ -417,6 +444,7 @@
       "fits_jobs": ["student", "courier", "civilian"],
       "fits_personality": ["active", "young", "disciplined", "urban"],
       "bad_fits": ["official", "family_man", "rural_work", "rich"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
       "flashiness": 2,
       "attention_level": 2,
       "realism_score": 8

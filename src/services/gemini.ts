@@ -19,11 +19,22 @@ Karakter hikayesinden su alanlari analiz et:
 - Yasam tarzi (lifestyle)
 - Kisilik (personality dizisi)
 - Gosteris seviyesi (flashiness 1-10)
-- Arac kullanim amaci (vehicle_need) — hikayede gecen kasa tipini ve kullanim amacini yaz (ornek: "suv - kamp, kirsal yol, pratik devriye")
+- Arac kullanim amaci (vehicle_need) — statü degil pratik ihtiyac yaz (ornek: "pickup/van - ses sistemi ve kaplama ekipmani tasima")
+- Arac amaci enum'u (vehicle_purpose): daily_commute|work|equipment_transport|family|recreation|status|project|weekend
+- Mali baski (financial_pressure): low|medium|high
+- Aile destegi (family_support): none|limited|stable|wealthy
+- Yasam evresi (life_stage): first_vehicle|early_career|established|successful
+- Kariyer evresi (career_stage): student|new_worker|stable_worker|small_business|established_professional
 - Baskin vibe etiketleri (dominant_vibes)
 
 Kurallar:
 - Oyuncunun hikayede acikca istedigi belirli araci (ornegin lambo) profili etkilemesin; sadece gercekci hikaye icerigini analiz et.
+- Ekonomik gercekcilik vibe'dan once gelir: gelir, yas, aile destegi, kariyer evresi, bolge ve kullanim amaci ana karar sinyalleridir.
+- "Arabalari seviyor", "hiz seviyor", "modifiye seviyor" tek basina pahali JDM/sports/muscle sinyali degildir. Para, is ve proje/garaj baglami yoksa bunu sadece zayif hobi sinyali say.
+- Hobi ile meslegi ayir: basketbol, spor, muzik, dans gibi hobiler arac sinifi secimini belirlemez. Garajda buyudu, kaplama yapiyor, ses sistemi kuruyor, parca/ekipman tasiyor, tamir isi yapiyor gibi detaylar vehicle_purpose icin onemlidir.
+- South LS/mahalle gecmisi otomatik lowrider, muscle veya suclu anlamina gelmez. Ailesi calisan, suc gecmisi olmayan karakter working_class/practical/low_profile okunmalidir.
+- Dusuk gelir + ogrenci/yeni isci/kasiyer/kurye/yeni tamirci = first_vehicle veya early_career; pahali/performance arac bugunku arac degil, ancak basari sonrasi hedef olabilir.
+- Ses sistemi, kaplama, tesisat, elektrik, insaat, kargo veya ekipman tasima = vehicle_purpose "equipment_transport" veya "work"; pickup/van/service/fleet sinyali ver.
 - Ama hikayede gercekci kasa tipi/kullanim amaci yaziyorsa (SUV, pickup, van, bisiklet, karavan, lowrider, motor) vehicle_need icinde belirt.
 - Hikayede SUV/pickup/sedan tercihi aciksa vehicle_need icinde kasa tipini belirt (suv, pickup, sedan).
 - Kirsal koken + kamp/balik/uzun yol + pratik arac = vehicle_need'de "suv" veya "pickup" kullan.
@@ -63,7 +74,12 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
     "job_type": "police|worker|criminal|business|unemployed|mechanic|civilian|other",
     "lifestyle": "practical|flashy|low_profile|family|criminal|professional|drifter|ambitious",
     "flashiness": 1,
-    "vehicle_need": "suv - kamp ve kirsal yolculuk",
+    "vehicle_need": "pickup/van - is ekipmani ve ses sistemi parcalari tasima",
+    "vehicle_purpose": "daily_commute|work|equipment_transport|family|recreation|status|project|weekend",
+    "financial_pressure": "low|medium|high",
+    "family_support": "none|limited|stable|wealthy",
+    "life_stage": "first_vehicle|early_career|established|successful",
+    "career_stage": "student|new_worker|stable_worker|small_business|established_professional",
     "dominant_vibes": ["etiket1", "etiket2"],
     "personality": ["ozellik1"]
   },

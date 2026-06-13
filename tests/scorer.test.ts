@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -29,6 +31,13 @@ function topClass(profileData: CharacterProfile): string | undefined {
   const catalog = loadVehicleCatalog();
   const top = rankVehicles(profileData, 1)[0].vehicle;
   return catalog.vehicles.find((v) => v.model === top)?.class;
+}
+
+function topVehicleEntry(profileData: CharacterProfile) {
+  const catalog = loadVehicleCatalog();
+  const top = rankVehicles(profileData, 1)[0];
+  const entry = catalog.vehicles.find((v) => v.model === top.vehicle);
+  return { top, entry };
 }
 
 describe('scoreVehicle', () => {
@@ -215,6 +224,145 @@ describe('rankVehicles', () => {
       assert.ok(item.score >= 0 && item.score <= 100);
       assert.ok(item.reason.length > 10);
     }
+  });
+
+  it('kasiyer dusuk gelir profilinde performance/status arac one cikmaz', () => {
+    const cashier = profile({
+      age: 20,
+      age_group: 'young',
+      income_level: 'low',
+      job_type: 'worker',
+      career_stage: 'new_worker',
+      life_stage: 'first_vehicle',
+      financial_pressure: 'high',
+      family_support: 'limited',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'kasiyer isi, ise gidip gelmek icin ekonomik ilk arac',
+      dominant_vibes: ['worker', 'starter_car', 'budget', 'practical'],
+      personality: ['modest', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(cashier);
+    assert.ok(entry?.utility_tags?.some((tag) => ['starter_car', 'daily_driver', 'fuel_economy'].includes(tag)), top.vehicle);
+    assert.ok((entry?.flashiness ?? 10) <= 3, top.vehicle);
+  });
+
+  it('yeni tamirci pahali/status arac yerine servis veya utility arac alir', () => {
+    const newMechanic = profile({
+      age: 22,
+      age_group: 'young',
+      income_level: 'lower_mid',
+      job_type: 'mechanic',
+      career_stage: 'new_worker',
+      life_stage: 'early_career',
+      financial_pressure: 'medium',
+      vehicle_purpose: 'work',
+      vehicle_need: 'yeni tamirci, ufak alet ve parca tasiyacak is araci',
+      dominant_vibes: ['mechanic', 'worker', 'practical', 'service'],
+      personality: ['hardworking', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(newMechanic);
+    assert.ok(entry?.utility_tags?.some((tag) => ['service_vehicle', 'work_truck', 'utility_pickup', 'cargo_van'].includes(tag)), top.vehicle);
+    assert.ok((entry?.flashiness ?? 10) < 5, top.vehicle);
+  });
+
+  it('universite ogrencisi Buffalo STX mantigina kaymadan ekonomik ilk arac alir', () => {
+    const student = profile({
+      age: 19,
+      age_group: 'young',
+      income_level: 'low',
+      job_type: 'civilian',
+      career_stage: 'student',
+      life_stage: 'first_vehicle',
+      financial_pressure: 'high',
+      family_support: 'limited',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'universite ogrencisi, okula gidip gelmek icin yakit ekonomik ilk arac',
+      dominant_vibes: ['student', 'starter_car', 'budget', 'city'],
+      personality: ['young', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(student);
+    assert.ok(entry?.utility_tags?.some((tag) => ['starter_car', 'daily_driver', 'fuel_economy'].includes(tag)), top.vehicle);
+    assert.notEqual(entry?.class, 'muscle');
+  });
+
+  it('Lorenzo tarzı ses sistemi/kaplama ogreneni Bobcat XL veya utility/service sınıfina iter', () => {
+    const lorenzo = profile({
+      age: 21,
+      age_group: 'young',
+      income_level: 'lower_mid',
+      origin: 'urban',
+      job_type: 'worker',
+      career_stage: 'new_worker',
+      life_stage: 'early_career',
+      financial_pressure: 'medium',
+      family_support: 'limited',
+      vehicle_purpose: 'equipment_transport',
+      vehicle_need: 'South LS working-class aile, ses sistemi ve kaplama isi ogreniyor, parca ve ekipman tasimasi lazim',
+      dominant_vibes: ['working_class', 'practical', 'service', 'equipment_transport'],
+      personality: ['hardworking', 'ambitious', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(lorenzo);
+    assert.ok(
+      top.vehicle === 'bobcatxl'
+        || entry?.utility_tags?.some((tag) => ['equipment_transport', 'service_vehicle', 'utility_pickup', 'cargo_van'].includes(tag)),
+      top.vehicle,
+    );
+  });
+
+  it('South LS ama sucsuz working-class aile lowrider/muscle otomatik almaz', () => {
+    const workingClass = profile({
+      age: 23,
+      age_group: 'young',
+      income_level: 'lower_mid',
+      origin: 'urban',
+      job_type: 'worker',
+      lifestyle: 'practical',
+      financial_pressure: 'medium',
+      family_support: 'stable',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'South LS mahallesinde buyudu, annesi babasi calisiyor, suc gecmisi yok, ise gidip gelmek icin sade arac',
+      dominant_vibes: ['working_class', 'practical', 'low_profile', 'urban'],
+      personality: ['modest', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(workingClass);
+    assert.notEqual(top.vehicle, 'voodoo');
+    assert.notEqual(entry?.class, 'muscle');
+  });
+
+  it('basketbol hobisi tek basina sports/performance arac tetiklemez', () => {
+    const basketball = profile({
+      age: 20,
+      age_group: 'young',
+      income_level: 'low',
+      career_stage: 'student',
+      life_stage: 'first_vehicle',
+      financial_pressure: 'high',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'universite ogrencisi, basketbol oynuyor, okula ve antrenmana ekonomik ulasim',
+      dominant_vibes: ['student', 'sport', 'active', 'budget'],
+      personality: ['active', 'disciplined'],
+    });
+    const { top, entry } = topVehicleEntry(basketball);
+    assert.ok((entry?.flashiness ?? 10) <= 3, top.vehicle);
+    assert.notEqual(entry?.class, 'muscle');
+  });
+
+  it('gelir progression sinyali bugunku ilk araci abartmaz', () => {
+    const progression = profile({
+      age: 19,
+      age_group: 'young',
+      income_level: 'low',
+      career_stage: 'new_worker',
+      life_stage: 'first_vehicle',
+      financial_pressure: 'high',
+      vehicle_purpose: 'daily_commute',
+      vehicle_need: 'ilk arac Asea gibi olmali, isler buyuyunce Bobcat XL, basarili olunca daha iyi sedan hedefliyor',
+      dominant_vibes: ['starter_car', 'ambitious', 'practical', 'budget'],
+      personality: ['ambitious', 'practical'],
+    });
+    const { top, entry } = topVehicleEntry(progression);
+    assert.ok(entry?.utility_tags?.some((tag) => ['starter_car', 'daily_driver', 'fuel_economy'].includes(tag)), top.vehicle);
+    assert.ok(top.reason.includes('Sebepler:'), top.reason);
   });
 });
 

@@ -4,9 +4,14 @@ import { withTimeout } from '../utils/timeout.js';
 import { parseAnalysisJson } from './normalize-analysis.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM RP karakter analiz uzmanisin. Sadece JSON dondur.
-Zorunlu yapi: { "character_profile": { income_level, origin, age_group, job_type, lifestyle, flashiness, vehicle_need, dominant_vibes, personality }, rejected_vehicle_types?, risk?, needs_admin_review? }
+Zorunlu yapi: { "character_profile": { income_level, origin, age_group, age?, gender?, job_type, lifestyle, flashiness, vehicle_need, vehicle_purpose?, financial_pressure?, family_support?, life_stage?, career_stage?, dominant_vibes, personality }, rejected_vehicle_types?, risk?, needs_admin_review? }
 character_profile sarmalayıcı zorunlu — alanlari kok seviyeye yazma.
-Oyuncunun istedigi araci profili etkilemesin. Gercekcilik oncelikli.`;
+Oyuncunun istedigi araci profili etkilemesin. Ekonomik gercekcilik vibe'dan once gelir.
+"Arabalari seviyor" tek basina pahali JDM/sports/muscle sinyali degildir.
+Hobi ile meslegi ayir: basketbol/spor/muzik arac secimini belirlemez; garaj, kaplama, ses sistemi, ekipman tasima ve tamir isi belirler.
+South LS/mahalle gecmisi tek basina lowrider/muscle/suclu anlamina gelmez; aile calisan ve suc gecmisi yoksa working_class/practical oku.
+Dusuk gelir + ogrenci/yeni isci/kasiyer/kurye/yeni tamirci icin first_vehicle/early_career ve pratik arac sinyali ver.
+Ses sistemi, kaplama, tesisat, insaat, kargo veya ekipman tasima varsa vehicle_purpose equipment_transport/work olsun.`;
 
 export async function analyzeStoryWithOpenAI(story: string): Promise<AiAnalysis> {
   const apiKey = process.env.OPENAI_API_KEY;

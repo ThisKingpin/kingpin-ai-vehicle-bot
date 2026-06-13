@@ -58,6 +58,31 @@ const BODY_TYPE_KEYWORDS: Record<string, string[]> = {
   bmx: ['bmx', 'bisiklet', 'cruiser', 'fixter', 'ehliyetsiz'],
 };
 
+const PURPOSE_KEYWORDS: Record<string, string[]> = {
+  equipment_transport: ['ekipman', 'malzeme', 'parça', 'parca', 'ses sistemi', 'subwoofer', 'kaplama', 'folyo', 'alet', 'takım', 'takim', 'tesisat', 'elektrik', 'inşaat', 'insaat'],
+  work: [' iş ', ' is ', 'işi', 'isi', 'işinde', 'isinde', 'çalışıyor', 'calisiyor', 'kasiyer', 'tamirci', 'kurye', 'kargo', 'depo', 'servis', 'esnaf', 'tesisat', 'elektrik', 'inşaat', 'insaat'],
+  daily_commute: ['günlük', 'gunluk', 'işe gidip', 'ise gidip', 'okula', 'şehir içi', 'sehir ici', 'yakıt', 'yakit', 'ekonomik', 'ilk araç', 'ilk arac'],
+  family: ['aile', 'çocuk', 'cocuk', 'anne', 'baba', 'kardeş', 'kardes', 'eşya', 'esya'],
+  recreation: ['kamp', 'balık', 'balik', 'av', 'sahil', 'hafta sonu', 'doğa', 'doga'],
+  project: ['garaj', 'proje', 'modifiye', 'restore', 'restorasyon', 'motor toplama'],
+  status: ['statü', 'statu', 'prestij', 'lüks', 'luks', 'gösteriş', 'gosteris'],
+};
+
+const PURPOSE_TAGS: Record<string, string[]> = {
+  equipment_transport: ['equipment_transport', 'contractor_vehicle', 'service_vehicle', 'utility_pickup', 'work_truck', 'cargo_van'],
+  work: ['service_vehicle', 'fleet_vehicle', 'work_truck', 'contractor_vehicle', 'cargo_van', 'utility_pickup', 'daily_driver'],
+  daily_commute: ['starter_car', 'daily_driver', 'fuel_economy', 'delivery_vehicle'],
+  family: ['family_vehicle', 'daily_driver', 'equipment_transport'],
+  recreation: ['recreation', 'weekend_car', 'family_vehicle', 'utility_pickup'],
+  project: ['project_car', 'utility_pickup', 'weekend_car'],
+  weekend: ['weekend_car', 'project_car', 'recreation'],
+  status: ['status_vehicle', 'weekend_car'],
+};
+
+const HOBBY_ONLY_KEYWORDS = ['basketbol', 'basketball', 'futbol', 'spor', 'music', 'müzik', 'muzik', 'dans'];
+const VEHICLE_SKILL_KEYWORDS = ['garaj', 'kaplama', 'ses sistemi', 'tamir', 'mekanik', 'modifiye', 'parça', 'parca'];
+const PERFORMANCE_VIBES = ['racer', 'street_meet', 'entry_tuner', 'powerful', 'flashy', 'high_status'];
+
 const REGION_KEYWORDS: Record<string, string[]> = {
   rural: ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'kasaba', 'kırsal', 'kirsal', 'çiftçi', 'ciftci'],
   beach: ['sahil', 'beach', 'vespucci'],
@@ -80,7 +105,7 @@ const LIFESTYLE_KEYWORDS: Record<string, string[]> = {
 };
 
 function profileSearchText(profile: CharacterProfile): string {
-  return `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.gender ?? ''} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
+  return `${profile.vehicle_need} ${profile.vehicle_purpose ?? ''} ${profile.financial_pressure ?? ''} ${profile.family_support ?? ''} ${profile.life_stage ?? ''} ${profile.career_stage ?? ''} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.gender ?? ''} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
 }
 
 function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
@@ -123,6 +148,119 @@ function keywordHit(text: string, keywords: string[]): boolean {
   return keywords.some((keyword) => text.includes(keyword));
 }
 
+function inferVehiclePurposes(profile: CharacterProfile): string[] {
+  const text = profileSearchText(profile);
+  const purposes = new Set<string>();
+  if (profile.vehicle_purpose) purposes.add(profile.vehicle_purpose);
+
+  for (const [purpose, keywords] of Object.entries(PURPOSE_KEYWORDS)) {
+    if (keywordHit(text, keywords)) purposes.add(purpose);
+  }
+
+  if (profile.life_stage === 'first_vehicle' || profile.career_stage === 'student') {
+    purposes.add('daily_commute');
+  }
+  if (profile.career_stage === 'new_worker') {
+    purposes.add('work');
+    purposes.add('daily_commute');
+  }
+  if (profile.lifestyle === 'family') purposes.add('family');
+
+  return [...purposes];
+}
+
+function hasUtilityTag(vehicle: VehicleEntry, tags: string[]): boolean {
+  const utilityTags = vehicle.utility_tags ?? [];
+  return tags.some((tag) => utilityTags.includes(tag));
+}
+
+function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  const purposes = inferVehiclePurposes(profile);
+  if (purposes.length === 0) return 0;
+
+  let score = 0;
+  for (const purpose of purposes) {
+    const tags = PURPOSE_TAGS[purpose] ?? [];
+    if (hasUtilityTag(vehicle, tags)) score += 45;
+
+    if (purpose === 'equipment_transport') {
+      if (vehicle.class === 'van' || vehicle.class === 'pickup' || vehicle.class === 'offroad') score += 25;
+      if (vehicle.class === 'sports' || vehicle.flashiness >= 5) score -= 55;
+      if (vehicle.class === 'compact' || vehicle.class === 'bmx' || vehicle.class === 'motorcycle') score -= 20;
+    }
+
+    if (purpose === 'daily_commute') {
+      if (vehicle.class === 'compact' || vehicle.class === 'sedan' || vehicle.class === 'bmx' || vehicle.class === 'motorcycle') score += 25;
+      if (vehicle.attention_level >= 4 || vehicle.flashiness >= 5) score -= 35;
+    }
+
+    if (purpose === 'family') {
+      if (vehicle.class === 'suv' || vehicle.class === 'van' || vehicle.class === 'sedan') score += 25;
+      if (vehicle.class === 'motorcycle' || vehicle.class === 'bmx' || vehicle.class === 'sports') score -= 55;
+    }
+
+    if (purpose === 'work') {
+      if (vehicle.class === 'van' || vehicle.class === 'offroad' || hasUtilityTag(vehicle, ['work_truck', 'service_vehicle', 'fleet_vehicle'])) score += 20;
+      if (vehicle.flashiness >= 5) score -= 30;
+    }
+  }
+
+  return score;
+}
+
+function priceTierIndex(tier: string): number {
+  return { low: 0, lower_mid: 1, mid: 2, upper_mid: 3, high: 4 }[tier] ?? 2;
+}
+
+function economicRealismScore(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  const incomeIndex = priceTierIndex(profile.income_level);
+  const vehicleIndex = priceTierIndex(vehicle.price_tier);
+  const gap = vehicleIndex - incomeIndex;
+  const age = getEffectiveAge(profile);
+  const earlyStage = profile.life_stage === 'first_vehicle'
+    || profile.life_stage === 'early_career'
+    || profile.career_stage === 'student'
+    || profile.career_stage === 'new_worker'
+    || profile.age_group === 'young'
+    || (age !== undefined && age <= 22);
+  const tightMoney = profile.income_level === 'low'
+    || profile.income_level === 'lower_mid'
+    || profile.financial_pressure === 'high'
+    || profile.family_support === 'none'
+    || profile.family_support === 'limited';
+  const hasWealthBackstory = profile.family_support === 'wealthy'
+    || profile.life_stage === 'successful'
+    || profile.career_stage === 'established_professional';
+  const performanceVehicle = vehicle.class === 'sports'
+    || vehicle.flashiness >= 5
+    || vehicle.vibes.some((v) => PERFORMANCE_VIBES.includes(v));
+  const purpose = profile.vehicle_purpose;
+  const justifiedProject = purpose === 'project' || purpose === 'weekend' || profile.life_stage === 'successful';
+
+  let score = 0;
+  if (gap <= -1) score += 8;
+  if (gap === 0) score += 18;
+  if (gap === 1) score -= tightMoney ? 30 : 8;
+  if (gap >= 2) score -= tightMoney ? 95 : 45;
+
+  if (earlyStage && gap >= 1 && !hasWealthBackstory) score -= 45;
+  if (tightMoney && performanceVehicle && !justifiedProject) score -= 75;
+  if (earlyStage && performanceVehicle && !justifiedProject) score -= 45;
+  if (profile.financial_pressure === 'high' && hasUtilityTag(vehicle, ['starter_car', 'fuel_economy', 'daily_driver'])) score += 25;
+  if (profile.family_support === 'wealthy' && vehicle.price_tier === 'high') score += 20;
+
+  return score;
+}
+
+function hobbyPenalty(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  const text = profileSearchText(profile);
+  const hobbyOnly = keywordHit(text, HOBBY_ONLY_KEYWORDS);
+  const hasVehicleSkill = keywordHit(text, VEHICLE_SKILL_KEYWORDS);
+  if (!hobbyOnly || hasVehicleSkill) return 0;
+  if (vehicle.class === 'sports' || vehicle.flashiness >= 5 || vehicle.vibes.includes('racer')) return -45;
+  return 0;
+}
+
 function hasExplicitLowriderSignal(text: string): boolean {
   return keywordHit(text, LIFESTYLE_KEYWORDS.lowrider)
     || keywordHit(text, LIFESTYLE_KEYWORDS.father_legacy)
@@ -160,9 +298,18 @@ function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: nu
   const shared = profile.dominant_vibes.filter((v) =>
     vehicle.vibes.some((vv) => vv.toLowerCase() === v.toLowerCase()),
   );
-  const vibeText = shared.length > 0 ? shared.join(', ') : profile.lifestyle;
+  const reasons: string[] = [];
+  const purposes = inferVehiclePurposes(profile);
+  if (purposes.includes('equipment_transport')) reasons.push('ekipman/parca tasima ihtiyacina uygun');
+  if (purposes.includes('work')) reasons.push('is odakli kullanim icin mantikli');
+  if (purposes.includes('daily_commute')) reasons.push('gunluk kullanim ve ekonomiyle uyumlu');
+  if (purposes.includes('family')) reasons.push('aile/eşya kullanimi icin pratik');
+  if (profile.income_level === 'low' || profile.income_level === 'lower_mid') reasons.push(`${profile.income_level} gelir seviyesini zorlamaz`);
+  if (profile.life_stage === 'first_vehicle' || profile.life_stage === 'early_career') reasons.push('yasam evresi icin abartisiz');
+  if (shared.length > 0) reasons.push(`${shared.join(', ')} sinyalleriyle uyumlu`);
+  if (reasons.length === 0) reasons.push(`${profile.lifestyle} profiline uyumlu`);
   const ageText = profile.age !== undefined ? ` Yas: ${profile.age}.` : '';
-  return `${vehicle.label}: ${vibeText} profiline uyum (${Math.round(score)} puan). ${vehicle.class} / ${vehicle.price_tier} segment.${ageText}`;
+  return `${vehicle.label}: ${Math.round(score)} puan. ${vehicle.class} / ${vehicle.price_tier} segment.${ageText} Sebepler: ${reasons.slice(0, 5).join('; ')}.`;
 }
 
 export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): number {
@@ -173,15 +320,15 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
   let score = 0;
 
   const vibeOverlap = overlapCount(profile.dominant_vibes, vehicle.vibes);
-  score += vibeOverlap * 40;
+  score += vibeOverlap * 24;
   const text = profileSearchText(profile);
 
   for (const [region, keywords] of Object.entries(REGION_KEYWORDS)) {
-    if (keywordHit(text, keywords) && vehicle.vibes.includes(region)) score += 20;
+    if (keywordHit(text, keywords) && vehicle.vibes.includes(region)) score += 16;
   }
 
   for (const [lifestyle, keywords] of Object.entries(LIFESTYLE_KEYWORDS)) {
-    if (keywordHit(text, keywords) && vehicle.vibes.includes(lifestyle)) score += 25;
+    if (keywordHit(text, keywords) && vehicle.vibes.includes(lifestyle)) score += 18;
   }
 
   const explicitLowrider = hasExplicitLowriderSignal(text);
@@ -232,10 +379,13 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
   const jobFit = vehicle.fits_jobs.some((j) =>
     jobKeys.some((k) => j.toLowerCase() === k.toLowerCase() || j.toLowerCase().includes(k.toLowerCase())),
   );
-  score += jobFit ? 20 : -5;
+  score += jobFit ? 16 : -5;
 
   const tierMap = INCOME_TIER_SCORE[profile.income_level] ?? INCOME_TIER_SCORE.mid;
   score += tierMap[vehicle.price_tier] ?? 0;
+  score += economicRealismScore(profile, vehicle);
+  score += purposeScore(profile, vehicle);
+  score += hobbyPenalty(profile, vehicle);
 
   const flashDelta = Math.abs(profile.flashiness - vehicle.flashiness);
   score -= flashDelta * 10;

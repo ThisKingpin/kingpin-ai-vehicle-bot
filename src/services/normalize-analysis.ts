@@ -10,6 +10,11 @@ const PROFILE_KEYS = new Set([
   'lifestyle',
   'flashiness',
   'vehicle_need',
+  'vehicle_purpose',
+  'financial_pressure',
+  'family_support',
+  'life_stage',
+  'career_stage',
   'dominant_vibes',
   'personality',
   'risk_level',
@@ -148,6 +153,69 @@ function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown>
     ),
     flashiness,
     vehicle_need: typeof raw.vehicle_need === 'string' && raw.vehicle_need.trim() ? raw.vehicle_need.trim() : 'daily transport',
+    ...(raw.vehicle_purpose
+      ? {
+          vehicle_purpose: coerceEnum(
+            raw.vehicle_purpose,
+            ['daily_commute', 'work', 'equipment_transport', 'family', 'recreation', 'status', 'project', 'weekend'],
+            {
+              daily: 'daily_commute',
+              commute: 'daily_commute',
+              is: 'work',
+              iş: 'work',
+              ekipman: 'equipment_transport',
+              equipment: 'equipment_transport',
+              aile: 'family',
+              status: 'status',
+              statu: 'status',
+              statü: 'status',
+              proje: 'project',
+              hafta_sonu: 'weekend',
+            },
+            'daily_commute',
+          ),
+        }
+      : {}),
+    ...(raw.financial_pressure
+      ? {
+          financial_pressure: coerceEnum(
+            raw.financial_pressure,
+            ['low', 'medium', 'high'],
+            { dusuk: 'low', düşük: 'low', orta: 'medium', yuksek: 'high', yüksek: 'high' },
+            'medium',
+          ),
+        }
+      : {}),
+    ...(raw.family_support
+      ? {
+          family_support: coerceEnum(
+            raw.family_support,
+            ['none', 'limited', 'stable', 'wealthy'],
+            { yok: 'none', az: 'limited', sinirli: 'limited', sınırlı: 'limited', stabil: 'stable', zengin: 'wealthy' },
+            'limited',
+          ),
+        }
+      : {}),
+    ...(raw.life_stage
+      ? {
+          life_stage: coerceEnum(
+            raw.life_stage,
+            ['first_vehicle', 'early_career', 'established', 'successful'],
+            { ilk_arac: 'first_vehicle', ilk_araç: 'first_vehicle', yeni: 'early_career', basarili: 'successful', başarılı: 'successful' },
+            'early_career',
+          ),
+        }
+      : {}),
+    ...(raw.career_stage
+      ? {
+          career_stage: coerceEnum(
+            raw.career_stage,
+            ['student', 'new_worker', 'stable_worker', 'small_business', 'established_professional'],
+            { ogrenci: 'student', öğrenci: 'student', yeni_isci: 'new_worker', yeni_işçi: 'new_worker', esnaf: 'small_business', profesyonel: 'established_professional' },
+            'stable_worker',
+          ),
+        }
+      : {}),
     dominant_vibes: vibes,
     ...(personality.length > 0 ? { personality } : {}),
   };

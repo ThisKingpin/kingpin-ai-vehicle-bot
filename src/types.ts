@@ -10,6 +10,11 @@ export const CharacterProfileSchema = z.object({
   lifestyle: z.enum(['practical', 'flashy', 'low_profile', 'family', 'criminal', 'professional', 'drifter', 'ambitious']),
   flashiness: z.number().min(1).max(10),
   vehicle_need: z.string(),
+  vehicle_purpose: z.enum(['daily_commute', 'work', 'equipment_transport', 'family', 'recreation', 'status', 'project', 'weekend']).optional(),
+  financial_pressure: z.enum(['low', 'medium', 'high']).optional(),
+  family_support: z.enum(['none', 'limited', 'stable', 'wealthy']).optional(),
+  life_stage: z.enum(['first_vehicle', 'early_career', 'established', 'successful']).optional(),
+  career_stage: z.enum(['student', 'new_worker', 'stable_worker', 'small_business', 'established_professional']).optional(),
   dominant_vibes: z.array(z.string()).min(1),
   personality: z.array(z.string()).optional(),
   risk_level: z.enum(['low', 'medium', 'high']).optional(),
@@ -42,6 +47,7 @@ export interface VehicleEntry {
   realism_score: number;
   min_age?: number;
   license_type?: 'car' | 'motorcycle' | 'bicycle';
+  utility_tags?: string[];
 }
 
 export interface VehicleCatalog {
