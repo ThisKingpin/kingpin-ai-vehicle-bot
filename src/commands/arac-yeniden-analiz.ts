@@ -4,7 +4,7 @@ import {
   type ChatInputCommandInteraction,
 } from 'discord.js';
 import { runAnalysis } from '../services/analysis.js';
-import { autoGrantTopVehicle, formatGrantError, sendGrantAuditLog } from '../services/auto-grant.js';
+import { adminRegrantTopVehicle, formatGrantError, sendGrantAuditLog } from '../services/auto-grant.js';
 import { resolveStoryText, StoryFetchError, STORY_MAX } from '../services/story-fetch.js';
 
 function isAdmin(interaction: ChatInputCommandInteraction): boolean {
@@ -20,7 +20,7 @@ function isAdmin(interaction: ChatInputCommandInteraction): boolean {
 export const aracYenidenAnalizCommand = {
   data: new SlashCommandBuilder()
     .setName('arac-yeniden-analiz')
-    .setDescription('[Yetkili] Hikayeyi yeniden analiz et ve araci otomatik ver')
+    .setDescription('[Yetkili] Eski AI aracini sil, yeniden analiz et ve yeni arac ver')
     .addStringOption((opt) =>
       opt.setName('citizenid').setDescription('CitizenID').setRequired(true),
     )
@@ -67,7 +67,7 @@ export const aracYenidenAnalizCommand = {
         link: interaction.options.getString('mesaj_linki'),
       });
 
-      await interaction.editReply({ content: 'Hikaye AI ile analiz ediliyor...' });
+      await interaction.editReply({ content: 'Eski AI araci kaldiriliyor, yeniden analiz ediliyor...' });
 
       const pending = await runAnalysis({
         discordId: interaction.options.getString('discord_id', true),
@@ -78,7 +78,7 @@ export const aracYenidenAnalizCommand = {
         forceRefresh: true,
       });
 
-      const granted = await autoGrantTopVehicle(pending, interaction.user.id);
+      const granted = await adminRegrantTopVehicle(pending, interaction.user.id);
       await sendGrantAuditLog(interaction.client, pending, granted, interaction.user.id);
 
       const sourceNote =
@@ -86,8 +86,13 @@ export const aracYenidenAnalizCommand = {
           ? ` (${story.length} karakter, max ${STORY_MAX})`
           : '';
 
+      const replacedNote = granted.replaced
+        ? 'Onceki AI araci garajdan silindi.\n'
+        : 'Onceki AI araci bulunamadi (sadece kayitlar sifirlandi).\n';
+
       await interaction.editReply({
         content:
+          replacedNote +
           `Yeniden analiz ve otomatik verme tamamlandi.\n` +
           `**${granted.label}** → ${granted.garage}\n` +
           `Kaynak: \`${source}\`${sourceNote}\n` +

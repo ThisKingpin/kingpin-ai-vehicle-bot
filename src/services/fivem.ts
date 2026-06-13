@@ -87,6 +87,18 @@ export async function saveAndGrant(payload: Record<string, unknown>) {
   );
 }
 
+export async function adminRegrant(payload: Record<string, unknown>) {
+  return runJob<{
+    success: boolean;
+    vehicleId: number;
+    model: string;
+    label: string;
+    garage: string;
+    requestId?: string;
+    replaced?: boolean;
+  }>('admin_regrant', payload);
+}
+
 export async function rejectRequest(requestId: string, adminId: string, reason?: string) {
   return runJob<{ success: boolean }>('reject', { requestId, adminId, reason });
 }

@@ -1,5 +1,5 @@
 import { ChannelType, type Client } from 'discord.js';
-import { grantVehicle, saveAndGrant, FivemApiError, FivemConnectionError } from './fivem.js';
+import { grantVehicle, saveAndGrant, adminRegrant, FivemApiError, FivemConnectionError } from './fivem.js';
 import { hashStory } from './analysis.js';
 import { loadVehicleCatalog } from './scorer.js';
 import { buildLogEmbed, buildAuditEmbed } from '../embeds/staff.js';
@@ -59,6 +59,45 @@ export async function autoGrantTopVehicle(
   }
 
   return result;
+}
+
+/** Yetkili yeniden analiz: onceki AI aracini siler, kayitlari sifirlar, yeni arac verir. */
+export async function adminRegrantTopVehicle(
+  pending: PendingRequest,
+  grantedBy: string,
+): Promise<{ model: string; label: string; garage: string; vehicleId: number; replaced: boolean }> {
+  const top = pending.recommendations[0];
+  if (!top) {
+    throw new Error('Analiz sonucu arac onerisi uretilemedi.');
+  }
+
+  const catalog = loadVehicleCatalog();
+  const storyHash = pending.storyHash ?? hashStory(pending.storyText);
+  const vehiclesVersion = pending.vehiclesVersion ?? catalog.version;
+
+  const granted = await adminRegrant({
+    requestId: pending.requestId,
+    discordId: pending.discordId,
+    citizenid: pending.citizenid,
+    characterName: pending.characterName,
+    serverName: pending.serverName,
+    storyText: pending.storyText,
+    storyHash,
+    vehiclesVersion,
+    aiProfileJson: JSON.stringify(pending.analysis),
+    recommendedVehiclesJson: JSON.stringify(pending.recommendations),
+    topScoresJson: JSON.stringify(pending.recommendations),
+    model: top.vehicle,
+    adminId: grantedBy,
+  });
+
+  return {
+    model: granted.model,
+    label: granted.label,
+    garage: granted.garage,
+    vehicleId: granted.vehicleId,
+    replaced: granted.replaced === true,
+  };
 }
 
 export async function sendGrantAuditLog(
