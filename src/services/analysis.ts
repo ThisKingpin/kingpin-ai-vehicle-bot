@@ -9,6 +9,7 @@ import {
   needsManualReview,
   rankVehicles,
 } from './scorer.js';
+import { rerankVehiclesByVisualFit } from './visual-vehicle-analysis.js';
 import { env } from '../env.js';
 import type { AiAnalysis, PendingRequest, ScoredVehicle } from '../types.js';
 
@@ -84,10 +85,11 @@ export async function runAnalysis(params: {
   analysis = await analyzeStory(params.story);
 
   const requestId = randomUUID();
-  const ranked = diversifyCloseRecommendations(
+  const deterministicRanked = diversifyCloseRecommendations(
     mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5)),
     `${requestId}:${params.citizenid}:${storyHash}`,
   );
+  const ranked = await rerankVehiclesByVisualFit(analysis, deterministicRanked);
 
   return {
     requestId,
