@@ -103,16 +103,63 @@ describe('rankVehicles', () => {
     assert.ok(vehicleClass === 'suv' || vehicleClass === 'van');
   });
 
-  it('lowrider/gang hikayesinde Voodoo veya Virgo Classic onceliklidir', () => {
+  it('explicit lowrider koleksiyoncu/old-school hikayesinde Voodoo veya Virgo Classic onceliklidir', () => {
     const lowriderGang = profile({
       job_type: 'criminal',
       lifestyle: 'criminal',
-      vehicle_need: 'mahalle lowrider kulturu ve eski okul cruiser',
-      dominant_vibes: ['lowrider', 'gang', 'neighborhood', 'old_school'],
-      personality: ['street_smart', 'proud'],
+      vehicle_need: 'lowrider koleksiyoneri, eski okul mahalle klasigi ve klasik Amerikan cruiser',
+      dominant_vibes: ['lowrider', 'old_school_gang', 'collector', 'old_school'],
+      personality: ['street_smart', 'proud', 'old_school'],
     });
     const top = rankVehicles(lowriderGang, 2).map((r) => r.vehicle);
     assert.ok(top.includes('voodoo') || top.includes('virgo2'));
+  });
+
+  it('modern zengin ceteci lowrider yerine sedan/SUV/modern guclu arac alir', () => {
+    const modernGang = profile({
+      age: 28,
+      income_level: 'high',
+      job_type: 'criminal',
+      lifestyle: 'flashy',
+      flashiness: 6,
+      vehicle_need: '2026 modern cete, zengin gorunumlu temiz SUV veya sedan, dikkat cekmeden guc gosteren arac',
+      dominant_vibes: ['modern_gang', 'rich_criminal', 'clean_look', 'high_status'],
+      personality: ['ambitious', 'bold'],
+    });
+    const top = rankVehicles(modernGang, 3);
+    const topModels = top.map((r) => r.vehicle);
+    const catalog = loadVehicleCatalog();
+    const topClasses = top.map((r) => catalog.vehicles.find((v) => v.model === r.vehicle)?.class);
+    assert.ok(!topModels.includes('voodoo'), `Voodoo modern gang top-3 olmamali: ${topModels.join(', ')}`);
+    assert.ok(topClasses.some((c) => c === 'sedan' || c === 'suv' || c === 'muscle'));
+  });
+
+  it('gang kelimesi tek basina lowrider top-1 yapmaz', () => {
+    const plainGang = profile({
+      job_type: 'criminal',
+      lifestyle: 'criminal',
+      vehicle_need: 'gang uyesi, 2026 sehirde gezen temiz gorunumlu arac',
+      dominant_vibes: ['gang', 'urban', 'clean_look'],
+      personality: ['street_smart'],
+    });
+    assert.notEqual(rankVehicles(plainGang, 1)[0].vehicle, 'voodoo');
+  });
+
+  it('low-profile criminal dikkat cekmeyen sedan/compact/SUV alir', () => {
+    const lowProfile = profile({
+      income_level: 'mid',
+      job_type: 'criminal',
+      lifestyle: 'low_profile',
+      flashiness: 2,
+      vehicle_need: 'low profile criminal, dikkat cekmeyen sivil gorunumlu temiz plaka arac',
+      dominant_vibes: ['low_profile_criminal', 'clean_look', 'urban'],
+      personality: ['calm', 'careful'],
+    });
+    const catalog = loadVehicleCatalog();
+    const top = rankVehicles(lowProfile, 1)[0];
+    const vehicleClass = catalog.vehicles.find((v) => v.model === top.vehicle)?.class;
+    assert.ok(vehicleClass === 'sedan' || vehicleClass === 'compact' || vehicleClass === 'suv');
+    assert.notEqual(top.vehicle, 'voodoo');
   });
 
   it('polis/belediye/orta yas profilinde resmi sedan onceliklidir', () => {
@@ -127,6 +174,33 @@ describe('rankVehicles', () => {
     });
     const top = rankVehicles(official, 3).map((r) => r.vehicle);
     assert.ok(top.includes('stanier') || top.includes('emperor'));
+  });
+
+  it('kadin karakterde babadan kalan arac sinyali eski/yadigar araci one alir', () => {
+    const inherited = profile({
+      gender: 'female',
+      age: 24,
+      age_group: 'young',
+      income_level: 'lower_mid',
+      vehicle_need: 'babasindan kalan aile yadigari eski arac, kasabada kullaniliyor',
+      dominant_vibes: ['father_legacy', 'inherited', 'sentimental', 'small_town'],
+      personality: ['modest', 'family_oriented'],
+    });
+    const top = rankVehicles(inherited, 3).map((r) => r.vehicle);
+    assert.ok(top.includes('regina') || top.includes('emperor') || top.includes('virgo2'));
+  });
+
+  it('sert ve ciddi karakterde daha ciddi/tough gorunumlu arac onerir', () => {
+    const seriousTough = profile({
+      gender: 'male',
+      age: 31,
+      lifestyle: 'low_profile',
+      vehicle_need: 'sert ciddi az konusan karakter, dayanikli ve ciddi gorunumlu arac',
+      dominant_vibes: ['serious', 'tough', 'low_profile', 'disciplined'],
+      personality: ['serious', 'tough'],
+    });
+    const top = rankVehicles(seriousTough, 3).map((r) => r.vehicle);
+    assert.ok(top.includes('stanier') || top.includes('emperor') || top.includes('picador'));
   });
 
   it('her zaman 1-100 arasi skor doner', () => {

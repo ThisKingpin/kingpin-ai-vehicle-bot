@@ -5,6 +5,7 @@ export const CharacterProfileSchema = z.object({
   origin: z.enum(['rural', 'small_town', 'suburban', 'urban', 'unknown']),
   age_group: z.enum(['young', 'adult', 'middle_aged', 'old']),
   age: z.number().int().min(0).max(120).optional(),
+  gender: z.enum(['male', 'female', 'unknown']).optional(),
   job_type: z.enum(['police', 'worker', 'criminal', 'business', 'unemployed', 'mechanic', 'civilian', 'other']),
   lifestyle: z.enum(['practical', 'flashy', 'low_profile', 'family', 'criminal', 'professional', 'drifter', 'ambitious']),
   flashiness: z.number().min(1).max(10),

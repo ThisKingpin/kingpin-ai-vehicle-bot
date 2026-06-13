@@ -65,15 +65,22 @@ const REGION_KEYWORDS: Record<string, string[]> = {
 };
 
 const LIFESTYLE_KEYWORDS: Record<string, string[]> = {
-  lowrider: ['lowrider', 'voodoo', 'mahalle', 'gang', 'eski okul'],
+  lowrider: ['lowrider', 'voodoo', 'eski okul', 'old school', 'old_school', 'collector', 'koleksiyoncu', 'mahalle klasiği', 'mahalle klasigi', 'old_school_gang'],
+  modern_gang: ['modern çete', 'modern cete', '2026', 'yeni nesil çete', 'yeni nesil cete', 'organize suç', 'organize suc', 'gang', 'çete', 'cete'],
+  rich_criminal: ['zengin çeteci', 'zengin ceteci', 'para aklama', 'lüks', 'luks', 'high status', 'temiz görünen', 'temiz gorunen', 'zengin gorunumlu', 'zengin görünümlü'],
+  low_profile_criminal: ['low profile', 'dikkat çekmeyen', 'dikkat cekmeyen', 'temiz plaka', 'sivil gorunum', 'sivil görünüm'],
   student: ['öğrenci', 'ogrenci', 'üniversite', 'universite', 'ilk aracı', 'ilk araci'],
   delivery: ['kurye', 'pizza', 'kargo', 'dağıtım', 'dagitim'],
   outdoor: ['kamp', 'balık', 'balik', 'avcılık', 'avcilik', 'doğa', 'doga'],
   service: ['tamirci', 'tesisatçı', 'tesisatci', 'elektrikçi', 'elektrikci', 'inşaat', 'insaat'],
+  father_legacy: ['babasından', 'babasindan', 'babadan', 'babası', 'babasi', 'aile yadigarı', 'aile yadigari', 'miras', 'kalan araç', 'kalan arac'],
+  inherited: ['yadigar', 'yadigarı', 'yadigari', 'miras', 'eski aile aracı', 'eski aile araci'],
+  serious: ['ciddi', 'sert', 'soğuk', 'soguk', 'disiplinli', 'az konuşan', 'az konusan'],
+  tough: ['sert', 'güçlü', 'guclu', 'dayanıklı', 'dayanikli', 'korkusuz', 'otoriter'],
 };
 
 function profileSearchText(profile: CharacterProfile): string {
-  return `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
+  return `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.gender ?? ''} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
 }
 
 function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
@@ -114,6 +121,12 @@ function overlapCount(a: string[], b: string[]): number {
 
 function keywordHit(text: string, keywords: string[]): boolean {
   return keywords.some((keyword) => text.includes(keyword));
+}
+
+function hasExplicitLowriderSignal(text: string): boolean {
+  return keywordHit(text, LIFESTYLE_KEYWORDS.lowrider)
+    || keywordHit(text, LIFESTYLE_KEYWORDS.father_legacy)
+    || keywordHit(text, LIFESTYLE_KEYWORDS.inherited);
 }
 
 function getEffectiveAge(profile: CharacterProfile): number | undefined {
@@ -169,6 +182,50 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
 
   for (const [lifestyle, keywords] of Object.entries(LIFESTYLE_KEYWORDS)) {
     if (keywordHit(text, keywords) && vehicle.vibes.includes(lifestyle)) score += 25;
+  }
+
+  const explicitLowrider = hasExplicitLowriderSignal(text);
+  const modernCriminal = profile.job_type === 'criminal'
+    && (
+      keywordHit(text, LIFESTYLE_KEYWORDS.modern_gang)
+      || keywordHit(text, LIFESTYLE_KEYWORDS.rich_criminal)
+      || keywordHit(text, LIFESTYLE_KEYWORDS.low_profile_criminal)
+      || profile.income_level === 'upper_mid'
+      || profile.income_level === 'high'
+    );
+
+  if (vehicle.vibes.includes('lowrider') && !explicitLowrider) {
+    score -= 90;
+  }
+
+  if (modernCriminal) {
+    if (vehicle.vibes.some((v) => v === 'modern_gang' || v === 'rich_criminal' || v === 'clean_look' || v === 'low_profile_criminal' || v === 'high_status')) {
+      score += 50;
+    }
+    if (vehicle.class === 'sedan' || vehicle.class === 'suv' || vehicle.class === 'muscle') {
+      score += 15;
+    }
+    if (vehicle.vibes.includes('lowrider') || vehicle.vibes.includes('old_school_gang')) {
+      score -= explicitLowrider ? 0 : 70;
+    }
+  }
+
+  if (keywordHit(text, LIFESTYLE_KEYWORDS.father_legacy) || keywordHit(text, LIFESTYLE_KEYWORDS.inherited)) {
+    if (vehicle.vibes.some((v) => v === 'father_legacy' || v === 'inherited' || v === 'old_school' || v === 'sentimental')) {
+      score += 55;
+    }
+    if (vehicle.flashiness >= 5 || vehicle.vibes.includes('modern')) {
+      score -= 25;
+    }
+  }
+
+  if (keywordHit(text, LIFESTYLE_KEYWORDS.serious) || keywordHit(text, LIFESTYLE_KEYWORDS.tough)) {
+    if (vehicle.vibes.some((v) => v === 'serious' || v === 'official' || v === 'tough' || v === 'disciplined')) {
+      score += 35;
+    }
+    if (vehicle.vibes.some((v) => v === 'fun' || v === 'quirky' || v === 'eco')) {
+      score -= 20;
+    }
   }
 
   const jobKeys = JOB_ALIASES[profile.job_type] ?? [profile.job_type];

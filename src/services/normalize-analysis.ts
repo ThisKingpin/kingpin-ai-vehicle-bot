@@ -5,6 +5,7 @@ const PROFILE_KEYS = new Set([
   'origin',
   'age_group',
   'age',
+  'gender',
   'job_type',
   'lifestyle',
   'flashiness',
@@ -48,6 +49,18 @@ const JOB_ALIASES: Record<string, string> = {
   işsiz: 'unemployed',
   tamirci: 'mechanic',
   sivil: 'civilian',
+};
+
+const GENDER_ALIASES: Record<string, string> = {
+  erkek: 'male',
+  male: 'male',
+  adam: 'male',
+  kadin: 'female',
+  kadın: 'female',
+  kiz: 'female',
+  kız: 'female',
+  female: 'female',
+  woman: 'female',
 };
 
 function coerceEnum(value: unknown, allowed: readonly string[], aliases: Record<string, string>, fallback: string): string {
@@ -118,6 +131,9 @@ function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown>
       'adult',
     ),
     ...(normalizeAge(raw.age) !== undefined ? { age: normalizeAge(raw.age) } : {}),
+    ...(raw.gender
+      ? { gender: coerceEnum(raw.gender, ['male', 'female', 'unknown'], GENDER_ALIASES, 'unknown') }
+      : {}),
     job_type: coerceEnum(
       raw.job_type,
       ['police', 'worker', 'criminal', 'business', 'unemployed', 'mechanic', 'civilian', 'other'],

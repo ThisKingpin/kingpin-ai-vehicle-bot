@@ -13,6 +13,7 @@ Meslek tek basina karar sebebi degildir. Ayni meslekteki iki karakter farkli pro
 Karakter hikayesinden su alanlari analiz et:
 - Ekonomik durum (income_level)
 - Yas (age ve age_group)
+- Cinsiyet hikayede netse (gender) — sadece bağlam için, stereotip karar vermek için değil
 - Meslek (job_type)
 - Gecmis, memleket/koken (origin)
 - Yasam tarzi (lifestyle)
@@ -32,13 +33,19 @@ Kurallar:
 - Suclu karakter otomatik yuksek flashiness almamali.
 - Yas hikayede netse age alanina sayi olarak yaz. Yas yoksa age alanini yazma.
 - ABD gercekligi: 16 yas alti motorlu arac kullanamaz, BMX/bisiklet uygundur. 16-17 yas icin pahali/gosterisli/muscle/motor tercihini cok dikkatli degerlendir.
-- Ogrenci/kurye/ilk arac = compact, faggio veya BMX sinyali. Aile/kamp = SUV/van. Sandy Shores/Grapeseed/Paleto = off-road/pickup/kirsal sinyali. Lowrider/mahalle/gang = Voodoo/Virgo sinyali. Kucuk esnaf/tamir/insaat = van/pickup sinyali.
+- Ogrenci/kurye/ilk arac = compact, faggio veya BMX sinyali. Aile/kamp = SUV/van. Sandy Shores/Grapeseed/Paleto = off-road/pickup/kirsal sinyali. Kucuk esnaf/tamir/insaat = van/pickup sinyali.
+- 2026 gercekligi: Ceteci/criminal karakter otomatik lowrider kullanmaz. Modern ceteciler genelde temiz, zengin gorunumlu, dikkat cekmeyen sedan/SUV veya guclu modern muscle kullanabilir.
+- Lowrider cok nadir verilmeli: sadece hikayede lowrider kulturu, eski okul mahalle kulturu, koleksiyonculuk, klasik Amerikan arac tutkusu veya aile yadigari klasik arac acikca varsa dominant_vibes icinde lowrider/old_school_gang/collector kullan.
+- Sadece "gang/cete/suclu" kelimesi varsa lowrider sinyali verme; bunun yerine modern_gang, rich_criminal, clean_look veya low_profile_criminal gibi 2026 sinyalleri kullan.
+- Kadın/erkek diye otomatik araç sınıfı seçme; cinsiyet tek başına karar sebebi değildir.
+- Hikayede kız/kadın karakterin babasından kalan araç, aile yadigarı, miras veya eski aile arabası varsa vehicle_need ve dominant_vibes icinde father_legacy/inherited/sentimental sinyalini belirt. Bu durumda eski, sade, aile/yadigar araçlar gerçekçidir.
+- Sert, ciddi, az konuşan, disiplinli, otoriter karakterlerde vehicle_need/dominant_vibes icinde serious/tough/official sinyallerini belirt; eğlenceli/küçük/şirin araçlara otomatik kayma.
 - Gercekcilik her zaman onceliklidir.
 
 Arac katalog sinyalleri:
 - SEDAN: Emperor resmi/eski polis/belediye/orta yas; Regina kasaba/ciftci/emekli; Primo alt gelir/kurye/depo; Ingot aile/kamp; Stratum genclik/JDM/modifiye; Stanier eski polis/guvenlik; Premier ortalama sehirli/yeni mezun.
 - COMPACT: Blista ogrenci/kurye/ilk arac; Issi ekonomik/ogretmen/sehirli; Prairie sokak kulturu/modifiye; Dilettante cevre/teknoloji/kurumsal; Rhapsody butce/ilk arac.
-- MUSCLE: Voodoo lowrider/mahalle/gang; Virgo Classic nostalji/orta yas; Impaler guclu/sokak yarisi; Picador isci/ciftci/tamirci/esnaf.
+- MUSCLE: Voodoo sadece lowrider/eski okul/koleksiyoncu; Virgo Classic nostalji/orta yas; Impaler guclu/modern zengin criminal/sokak yarisi; Picador isci/ciftci/tamirci/esnaf.
 - SUV: Seminole aile/kamp/doga; BeeJay XL kirsal/av/balik.
 - VANS: Surfer sahil/hippi; Speedo kargo/kucuk isletme; Journey karavan/gezgin; Bobcat XL insaat/tesisat/esnaf.
 - MOTORCYCLE: Faggio pizza/ogrenci/butce; Manchez dag/kirsal/avci/kacakci.
@@ -52,6 +59,7 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
     "origin": "rural|small_town|suburban|urban|unknown",
     "age_group": "young|adult|middle_aged|old",
     "age": 27,
+    "gender": "male|female|unknown",
     "job_type": "police|worker|criminal|business|unemployed|mechanic|civilian|other",
     "lifestyle": "practical|flashy|low_profile|family|criminal|professional|drifter|ambitious",
     "flashiness": 1,
