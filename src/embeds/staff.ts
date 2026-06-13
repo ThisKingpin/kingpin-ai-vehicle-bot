@@ -103,30 +103,51 @@ export function buildRecommendationButtons(pending: PendingRequest): ActionRowBu
   return rows;
 }
 
+function humanizeReason(reason: string): string {
+  return reason
+    .replace(/\blower_mid\b/g, 'orta-alt')
+    .replace(/\blow\b/g, 'dusuk')
+    .replace(/\bmid\b/g, 'orta')
+    .replace(/\bequipment\/parca\b/g, 'ekipman/parca')
+    .replace(/\bis odakli\b/g, 'is odakli')
+    .trim();
+}
+
+function formatPlayerReasons(reason: string): string {
+  const [, rawReasons] = reason.split('Sebepler:');
+  const source = rawReasons ?? reason;
+  const reasons = source
+    .replace(/\.$/, '')
+    .split(';')
+    .map((item) => humanizeReason(item))
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (reasons.length === 0) {
+    return '- Karakter hikayenizle genel olarak uyumlu bulundu.';
+  }
+
+  return reasons.map((item) => `- ${item}`).join('\n');
+}
+
 export function buildPlayerGrantedEmbed(
   characterName: string,
   granted: { label: string; model: string; garage: string; score: number; reason: string },
-  alternatives: ScoredVehicle[],
+  _alternatives: ScoredVehicle[],
 ): EmbedBuilder {
-  const altText =
-    alternatives.length > 1
-      ? '\n\n**Diger uygun araclar:**\n' +
-        alternatives
-          .slice(1, 4)
-          .map((r, i) => `${i + 2}. ${r.label} (${r.score})`)
-          .join('\n')
-      : '';
+  const reasons = formatPlayerReasons(granted.reason);
 
   const embed = new EmbedBuilder()
     .setTitle('Araciniz verildi')
     .setDescription(
-      `**${characterName}** icin hikayeniz analiz edildi ve araciniz garajiniza eklendi.\n\n` +
-        `**${granted.label}** (\`${granted.model}\`)\n` +
-        `Skor: ${granted.score} — ${granted.reason}\n` +
-        `Garaj: **${granted.garage}**` +
-        altText,
+      `**${characterName}** icin karakter hikayenize en uygun arac garajiniza eklendi.`,
     )
     .setColor(0x2ecc71)
+    .addFields(
+      { name: 'Verilen arac', value: `**${granted.label}**`, inline: false },
+      { name: 'Neden bu arac?', value: reasons, inline: false },
+      { name: 'Garaj', value: `**${granted.garage}**`, inline: true },
+    )
     .setTimestamp();
 
   applyVehicleImage(embed, granted.model);
