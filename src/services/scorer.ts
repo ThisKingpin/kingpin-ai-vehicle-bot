@@ -23,37 +23,61 @@ const INCOME_TIER_SCORE: Record<string, Record<string, number>> = {
 };
 
 const JOB_ALIASES: Record<string, string[]> = {
-  police: ['police', 'sheriff', 'security', 'law_enforcement'],
-  criminal: ['criminal', 'criminal_low_profile'],
-  worker: ['worker', 'blue_collar'],
-  business: ['business', 'white_collar'],
-  mechanic: ['mechanic'],
-  unemployed: ['unemployed', 'civilian'],
-  civilian: ['civilian', 'worker', 'unemployed'],
-  other: ['civilian', 'worker'],
+  police: ['police', 'sheriff', 'security', 'law_enforcement', 'government', 'municipal'],
+  criminal: ['criminal', 'criminal_low_profile', 'gang', 'smuggler'],
+  worker: ['worker', 'blue_collar', 'warehouse', 'construction', 'delivery', 'courier', 'farmer', 'miner', 'scrapper'],
+  business: ['business', 'white_collar', 'office', 'corporate', 'small_business'],
+  mechanic: ['mechanic', 'service'],
+  unemployed: ['unemployed', 'civilian', 'student'],
+  civilian: ['civilian', 'worker', 'unemployed', 'student', 'family'],
+  other: ['civilian', 'worker', 'student'],
 };
 
 /** Maps catalog `class` values to preference buckets */
 const CLASS_GROUPS: Record<string, string[]> = {
   suv: ['suv'],
   sedan: ['sedan', 'old_sedan'],
+  compact: ['compact'],
   pickup: ['pickup'],
   van: ['van'],
   offroad: ['offroad', 'pickup', 'suv'],
   muscle: ['muscle'],
   sports: ['sports'],
+  motorcycle: ['motorcycle'],
+  bmx: ['bmx'],
 };
 
 const BODY_TYPE_KEYWORDS: Record<string, string[]> = {
-  suv: ['suv', 'crossover', 'explorer', 'jeep', 'arazi', 'kamp', 'offroad', '4x4', 'uzun yol', 'balik', 'balık'],
-  pickup: ['pickup', 'kamyonet', 'truck', 'pikap'],
+  suv: ['suv', 'crossover', 'explorer', 'jeep', 'arazi', 'kamp', 'offroad', '4x4', 'uzun yol', 'balik', 'balık', 'aile'],
+  pickup: ['pickup', 'kamyonet', 'truck', 'pikap', 'esnaf', 'inşaat', 'insaat', 'tesisat', 'elektrik'],
   sedan: ['sedan', 'saloon', 'limuzin'],
-  van: ['minivan', 'van', 'minibüs', 'minibus'],
-  offroad: ['offroad', 'arazi', 'trail', 'dirt'],
+  compact: ['compact', 'kompakt', 'ilk arac', 'ilk araç', 'öğrenci', 'ogrenci', 'kurye'],
+  van: ['minivan', 'van', 'minibüs', 'minibus', 'kargo', 'karavan', 'servis'],
+  offroad: ['offroad', 'arazi', 'trail', 'dirt', 'çöl', 'col', 'sandy shores', 'madenci', 'hurda'],
+  motorcycle: ['motor', 'motosiklet', 'faggio', 'manchez'],
+  bmx: ['bmx', 'bisiklet', 'cruiser', 'fixter', 'ehliyetsiz'],
 };
 
+const REGION_KEYWORDS: Record<string, string[]> = {
+  rural: ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'kasaba', 'kırsal', 'kirsal', 'çiftçi', 'ciftci'],
+  beach: ['sahil', 'beach', 'vespucci'],
+  urban: ['los santos', 'şehir', 'sehir', 'downtown', 'mahallesinde'],
+};
+
+const LIFESTYLE_KEYWORDS: Record<string, string[]> = {
+  lowrider: ['lowrider', 'voodoo', 'mahalle', 'gang', 'eski okul'],
+  student: ['öğrenci', 'ogrenci', 'üniversite', 'universite', 'ilk aracı', 'ilk araci'],
+  delivery: ['kurye', 'pizza', 'kargo', 'dağıtım', 'dagitim'],
+  outdoor: ['kamp', 'balık', 'balik', 'avcılık', 'avcilik', 'doğa', 'doga'],
+  service: ['tamirci', 'tesisatçı', 'tesisatci', 'elektrikçi', 'elektrikci', 'inşaat', 'insaat'],
+};
+
+function profileSearchText(profile: CharacterProfile): string {
+  return `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
+}
+
 function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
-  const text = `${profile.vehicle_need} ${profile.dominant_vibes.join(' ')}`.toLowerCase();
+  const text = profileSearchText(profile);
   const preferred = new Set<string>();
 
   for (const [bodyClass, keywords] of Object.entries(BODY_TYPE_KEYWORDS)) {
@@ -65,6 +89,7 @@ function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
   if (profile.origin === 'rural' && profile.lifestyle !== 'flashy') {
     preferred.add('suv');
     preferred.add('pickup');
+    preferred.add('offroad');
   }
 
   return [...preferred];
@@ -87,12 +112,44 @@ function overlapCount(a: string[], b: string[]): number {
   return a.filter((x) => setB.has(x.toLowerCase())).length;
 }
 
+function keywordHit(text: string, keywords: string[]): boolean {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
+function getEffectiveAge(profile: CharacterProfile): number | undefined {
+  if (typeof profile.age === 'number') return profile.age;
+  return undefined;
+}
+
+function ageLicenseScore(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  const age = getEffectiveAge(profile);
+  if (age === undefined) return 0;
+
+  const licenseType = vehicle.license_type ?? (vehicle.class === 'bmx' ? 'bicycle' : 'car');
+  if (age < 16) {
+    return licenseType === 'bicycle' ? 140 : -300;
+  }
+
+  let score = 0;
+  const minAge = vehicle.min_age ?? (licenseType === 'bicycle' ? 0 : 16);
+  if (age < minAge) score -= 160;
+
+  if (age < 18) {
+    if (vehicle.class === 'muscle' || vehicle.class === 'motorcycle') score -= 50;
+    if (vehicle.flashiness >= 4 || vehicle.attention_level >= 4) score -= 30;
+    if (vehicle.class === 'compact' || vehicle.class === 'bmx') score += 20;
+  }
+
+  return score;
+}
+
 function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: number): string {
   const shared = profile.dominant_vibes.filter((v) =>
     vehicle.vibes.some((vv) => vv.toLowerCase() === v.toLowerCase()),
   );
   const vibeText = shared.length > 0 ? shared.join(', ') : profile.lifestyle;
-  return `${vehicle.label}: ${vibeText} profiline uyum (${Math.round(score)} puan). ${vehicle.class} / ${vehicle.price_tier} segment.`;
+  const ageText = profile.age !== undefined ? ` Yas: ${profile.age}.` : '';
+  return `${vehicle.label}: ${vibeText} profiline uyum (${Math.round(score)} puan). ${vehicle.class} / ${vehicle.price_tier} segment.${ageText}`;
 }
 
 export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): number {
@@ -104,6 +161,15 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
 
   const vibeOverlap = overlapCount(profile.dominant_vibes, vehicle.vibes);
   score += vibeOverlap * 40;
+  const text = profileSearchText(profile);
+
+  for (const [region, keywords] of Object.entries(REGION_KEYWORDS)) {
+    if (keywordHit(text, keywords) && vehicle.vibes.includes(region)) score += 20;
+  }
+
+  for (const [lifestyle, keywords] of Object.entries(LIFESTYLE_KEYWORDS)) {
+    if (keywordHit(text, keywords) && vehicle.vibes.includes(lifestyle)) score += 25;
+  }
 
   const jobKeys = JOB_ALIASES[profile.job_type] ?? [profile.job_type];
   const jobFit = vehicle.fits_jobs.some((j) =>
@@ -128,6 +194,7 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
   score += personalityFit * 5;
 
   score += (vehicle.realism_score ?? 5) * 0.5;
+  score += ageLicenseScore(profile, vehicle);
 
   if (profile.lifestyle === 'low_profile' && vehicle.attention_level >= 5) {
     score -= 15;
@@ -138,9 +205,13 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
 
   const preferredBodies = inferPreferredBodyClasses(profile);
   if (bodyClassMatchesPreference(vehicle.class, preferredBodies)) {
-    score += 35;
+    score += 45;
   } else if (bodyClassConflictsPreference(vehicle.class, preferredBodies)) {
-    score -= 30;
+    score -= 45;
+  }
+
+  if (profile.age !== undefined && profile.age < 16 && vehicle.class !== 'bmx') {
+    score -= 500;
   }
 
   return Math.max(0, score);

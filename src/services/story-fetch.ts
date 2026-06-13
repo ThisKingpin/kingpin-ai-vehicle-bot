@@ -10,6 +10,9 @@ const STORY_MAX = 12000;
 
 export { STORY_MIN, STORY_MAX };
 
+const FORUM_PERMISSION_HINT =
+  'Botun konuyu mention olmadan okuyabilmesi icin bot rolunde forum kanalinda View Channel ve Read Message History yetkileri olmali. Private thread kullaniyorsaniz bot rolune thread erisimi verin veya konuyu public forum post olarak acin.';
+
 export class StoryFetchError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,7 +72,7 @@ function assertAllowedForum(thread: ThreadChannel) {
   const parentId = thread.parentId;
   if (parentId !== allowedForumId && thread.id !== allowedForumId) {
     throw new StoryFetchError(
-      'Bu konu izin verilen hikaye forumunda degil. Dogru forumda acilan konuyu kullanin.',
+      `Bu konu izin verilen hikaye forumunda degil. FORUM_CHANNEL_ID ayarini ve dogru forum ID'sini kontrol edin. ${FORUM_PERMISSION_HINT}`,
     );
   }
 }
@@ -82,20 +85,24 @@ async function fetchFromThread(client: Client, thread: ThreadChannel): Promise<s
   try {
     const starter = await thread.fetchStarterMessage();
     if (starter) text = messageToText(starter);
-  } catch {
-    // starter yoksa mesajlardan oku
+  } catch (err) {
+    console.warn('[story-fetch] Starter message okunamadi, thread mesajlari deneniyor:', err);
   }
 
   if (text.length < STORY_MIN) {
-    const messages = await thread.messages.fetch({ limit: 10 });
-    const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-    const combined = sorted.map(messageToText).filter(Boolean).join('\n\n');
-    if (combined.length > text.length) text = combined;
+    try {
+      const messages = await thread.messages.fetch({ limit: 25 });
+      const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      const combined = sorted.map(messageToText).filter(Boolean).join('\n\n');
+      if (combined.length > text.length) text = combined;
+    } catch (err) {
+      throw new StoryFetchError(`Konu mesajlari okunamadi. ${FORUM_PERMISSION_HINT}`);
+    }
   }
 
   if (!text) {
     throw new StoryFetchError(
-      'Konu icerigi okunamadi. Botun forum kanalini gorebilmesi ve Mesaj Gecmisini Okuma yetkisi olmali.',
+      `Konu icerigi okunamadi. ${FORUM_PERMISSION_HINT}`,
     );
   }
 
@@ -109,13 +116,19 @@ async function fetchFromThreadId(
 ): Promise<string> {
   const id = threadId.trim().replace(/\D/g, '');
   if (!id || id.length < 17) {
-    throw new StoryFetchError('Gecersiz konu ID. Forum konusuna sag tik → Konu ID\'sini Kopyala.');
+    throw new StoryFetchError('Gecersiz konu ID. Forum konusuna sag tik → Konu ID\'sini Kopyala. Mesaj ID degil, konu/thread ID gerekli.');
   }
 
-  const channel = await client.channels.fetch(id);
+  let channel;
+  try {
+    channel = await client.channels.fetch(id);
+  } catch (err) {
+    throw new StoryFetchError(`Konu bulunamadi veya bot bu konuyu goremiyor. ${FORUM_PERMISSION_HINT}`);
+  }
+
   if (!channel?.isThread()) {
     throw new StoryFetchError(
-      'Bu ID bir forum konusu (thread) degil. Hikaye yazdiginiz forum gonderisinin linkini veya konu ID\'sini kullanin.',
+      `Bu ID bir forum konusu (thread) degil. Hikaye yazdiginiz forum gonderisinin linkini veya konu ID'sini kullanin. ${FORUM_PERMISSION_HINT}`,
     );
   }
 
@@ -141,7 +154,12 @@ async function fetchFromLink(
   assertGuildAccess(parsed.guildId, interactionGuildId);
 
   if (parsed.messageId) {
-    const channel = await client.channels.fetch(parsed.channelId);
+    let channel;
+    try {
+      channel = await client.channels.fetch(parsed.channelId);
+    } catch {
+      throw new StoryFetchError(`Linkteki kanal/konu okunamadi. ${FORUM_PERMISSION_HINT}`);
+    }
     if (channel?.isThread()) {
       return fetchFromThread(client, channel);
     }
@@ -151,7 +169,7 @@ async function fetchFromLink(
       return validateStory(messageToText(message));
     }
 
-    throw new StoryFetchError('Mesaj kanali okunamadi.');
+    throw new StoryFetchError(`Mesaj kanali okunamadi. ${FORUM_PERMISSION_HINT}`);
   }
 
   return fetchFromThreadId(client, parsed.channelId, interactionGuildId);

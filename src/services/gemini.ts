@@ -12,7 +12,7 @@ Meslek tek basina karar sebebi degildir. Ayni meslekteki iki karakter farkli pro
 
 Karakter hikayesinden su alanlari analiz et:
 - Ekonomik durum (income_level)
-- Yas (age_group)
+- Yas (age ve age_group)
 - Meslek (job_type)
 - Gecmis, memleket/koken (origin)
 - Yasam tarzi (lifestyle)
@@ -22,14 +22,28 @@ Karakter hikayesinden su alanlari analiz et:
 - Baskin vibe etiketleri (dominant_vibes)
 
 Kurallar:
-- Oyuncunun hikayede acikca istedigi araci (ornegin lambo) profili etkilemesin; sadece gercekci hikaye icerigini analiz et.
+- Oyuncunun hikayede acikca istedigi belirli araci (ornegin lambo) profili etkilemesin; sadece gercekci hikaye icerigini analiz et.
+- Ama hikayede gercekci kasa tipi/kullanim amaci yaziyorsa (SUV, pickup, van, bisiklet, karavan, lowrider, motor) vehicle_need icinde belirt.
 - Hikayede SUV/pickup/sedan tercihi aciksa vehicle_need icinde kasa tipini belirt (suv, pickup, sedan).
 - Kirsal koken + kamp/balik/uzun yol + pratik arac = vehicle_need'de "suv" veya "pickup" kullan.
 - Polis karakter otomatik sedan almaz; hikayede SUV/pickup varsa onu yansit.
 - Kasabadan gelen dusuk gelirli karakter flashiness 1-3 olmali.
 - Polis karakter otomatik olarak zengin/sportif profil almamali; hikayeye gore belirle.
 - Suclu karakter otomatik yuksek flashiness almamali.
+- Yas hikayede netse age alanina sayi olarak yaz. Yas yoksa age alanini yazma.
+- ABD gercekligi: 16 yas alti motorlu arac kullanamaz, BMX/bisiklet uygundur. 16-17 yas icin pahali/gosterisli/muscle/motor tercihini cok dikkatli degerlendir.
+- Ogrenci/kurye/ilk arac = compact, faggio veya BMX sinyali. Aile/kamp = SUV/van. Sandy Shores/Grapeseed/Paleto = off-road/pickup/kirsal sinyali. Lowrider/mahalle/gang = Voodoo/Virgo sinyali. Kucuk esnaf/tamir/insaat = van/pickup sinyali.
 - Gercekcilik her zaman onceliklidir.
+
+Arac katalog sinyalleri:
+- SEDAN: Emperor resmi/eski polis/belediye/orta yas; Regina kasaba/ciftci/emekli; Primo alt gelir/kurye/depo; Ingot aile/kamp; Stratum genclik/JDM/modifiye; Stanier eski polis/guvenlik; Premier ortalama sehirli/yeni mezun.
+- COMPACT: Blista ogrenci/kurye/ilk arac; Issi ekonomik/ogretmen/sehirli; Prairie sokak kulturu/modifiye; Dilettante cevre/teknoloji/kurumsal; Rhapsody butce/ilk arac.
+- MUSCLE: Voodoo lowrider/mahalle/gang; Virgo Classic nostalji/orta yas; Impaler guclu/sokak yarisi; Picador isci/ciftci/tamirci/esnaf.
+- SUV: Seminole aile/kamp/doga; BeeJay XL kirsal/av/balik.
+- VANS: Surfer sahil/hippi; Speedo kargo/kucuk isletme; Journey karavan/gezgin; Bobcat XL insaat/tesisat/esnaf.
+- MOTORCYCLE: Faggio pizza/ogrenci/butce; Manchez dag/kirsal/avci/kacakci.
+- OFFROAD: Duneloader hurdaci/madenci/ciftci; Rusty Rebel Sandy Shores/hurdaci/tamirci/col.
+- BMX: Cruiser sahil/ogrenci/ehliyetsiz; Fixter bisiklet kulturu/spor/sehir.
 
 ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu):
 {
@@ -37,6 +51,7 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
     "income_level": "low|lower_mid|mid|upper_mid|high",
     "origin": "rural|small_town|suburban|urban|unknown",
     "age_group": "young|adult|middle_aged|old",
+    "age": 27,
     "job_type": "police|worker|criminal|business|unemployed|mechanic|civilian|other",
     "lifestyle": "practical|flashy|low_profile|family|criminal|professional|drifter|ambitious",
     "flashiness": 1,

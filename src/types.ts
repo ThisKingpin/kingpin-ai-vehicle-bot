@@ -4,6 +4,7 @@ export const CharacterProfileSchema = z.object({
   income_level: z.enum(['low', 'lower_mid', 'mid', 'upper_mid', 'high']),
   origin: z.enum(['rural', 'small_town', 'suburban', 'urban', 'unknown']),
   age_group: z.enum(['young', 'adult', 'middle_aged', 'old']),
+  age: z.number().int().min(0).max(120).optional(),
   job_type: z.enum(['police', 'worker', 'criminal', 'business', 'unemployed', 'mechanic', 'civilian', 'other']),
   lifestyle: z.enum(['practical', 'flashy', 'low_profile', 'family', 'criminal', 'professional', 'drifter', 'ambitious']),
   flashiness: z.number().min(1).max(10),
@@ -38,6 +39,8 @@ export interface VehicleEntry {
   flashiness: number;
   attention_level: number;
   realism_score: number;
+  min_age?: number;
+  license_type?: 'car' | 'motorcycle' | 'bicycle';
 }
 
 export interface VehicleCatalog {

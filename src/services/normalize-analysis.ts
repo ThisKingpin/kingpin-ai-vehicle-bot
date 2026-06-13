@@ -4,6 +4,7 @@ const PROFILE_KEYS = new Set([
   'income_level',
   'origin',
   'age_group',
+  'age',
   'job_type',
   'lifestyle',
   'flashiness',
@@ -82,6 +83,16 @@ function normalizeFlashiness(value: unknown): number {
   return Math.min(10, Math.max(1, Math.round(flashiness)));
 }
 
+function normalizeAge(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+  if (typeof value !== 'string') return undefined;
+  const match = value.match(/\d{1,3}/);
+  if (!match) return undefined;
+  const age = Number(match[0]);
+  if (!Number.isFinite(age) || age < 0 || age > 120) return undefined;
+  return age;
+}
+
 function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown> {
   const vibes = normalizeStringArray(raw.dominant_vibes, ['practical']);
   const personality = normalizeStringArray(raw.personality, []);
@@ -106,6 +117,7 @@ function normalizeProfile(raw: Record<string, unknown>): Record<string, unknown>
       { genc: 'young', genç: 'young', yasli: 'old', yaşlı: 'old', middle: 'middle_aged' },
       'adult',
     ),
+    ...(normalizeAge(raw.age) !== undefined ? { age: normalizeAge(raw.age) } : {}),
     job_type: coerceEnum(
       raw.job_type,
       ['police', 'worker', 'criminal', 'business', 'unemployed', 'mechanic', 'civilian', 'other'],
