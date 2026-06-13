@@ -285,8 +285,8 @@ describe('rankVehicles', () => {
     assert.notEqual(entry?.class, 'muscle');
   });
 
-  it('Lorenzo tarzı ses sistemi/kaplama ogreneni Bobcat XL veya utility/service sınıfina iter', () => {
-    const lorenzo = profile({
+  it('sehirli customs/audio-wrap profili Duneloader yerine utility/service sınıfina gider', () => {
+    const urbanCustoms = profile({
       age: 21,
       age_group: 'young',
       income_level: 'lower_mid',
@@ -297,12 +297,12 @@ describe('rankVehicles', () => {
       financial_pressure: 'medium',
       family_support: 'limited',
       vehicle_purpose: 'equipment_transport',
-      vehicle_need: 'Chamberlain South LS sehir cocugu, babasinin garajinda ses sistemi ve kaplama isi ogreniyor, mahalle musterilerine hizmet veriyor, parca ve ekipman tasimasi lazim',
+      vehicle_need: 'sehir ici mahallede buyumus, aile garajinda ses sistemi ve kaplama isi ogreniyor, mahalle musterilerine hizmet veriyor, parca ve ekipman tasimasi lazim',
       dominant_vibes: ['working_class', 'urban', 'practical', 'service', 'equipment_transport', 'car_audio', 'wrap'],
       personality: ['hardworking', 'ambitious', 'practical'],
     });
-    const topThree = rankVehicles(lorenzo, 3);
-    const { top, entry } = topVehicleEntry(lorenzo);
+    const topThree = rankVehicles(urbanCustoms, 3);
+    const { top, entry } = topVehicleEntry(urbanCustoms);
     assert.ok(
       top.vehicle === 'bobcatxl'
         || entry?.utility_tags?.some((tag) => ['equipment_transport', 'service_vehicle', 'utility_pickup', 'cargo_van'].includes(tag)),
@@ -311,7 +311,25 @@ describe('rankVehicles', () => {
     assert.ok(!topThree.some((item) => item.vehicle === 'dloader'), topThree.map((item) => item.vehicle).join(', '));
   });
 
-  it('Duneloader sadece rural hurda/Blaine County profilinde ilk 3e girer', () => {
+  it('sehir ici is profili rural-only hurda araclarini kolay almaz', () => {
+    const cityWorker = profile({
+      age: 25,
+      age_group: 'adult',
+      income_level: 'lower_mid',
+      origin: 'urban',
+      job_type: 'mechanic',
+      career_stage: 'stable_worker',
+      vehicle_purpose: 'work',
+      vehicle_need: 'Los Santos icinde servis isi yapan tamirci, musteri araci alir getirir, gunluk sehir ici is kullanimina uygun arac',
+      dominant_vibes: ['urban', 'service', 'worker', 'practical'],
+      personality: ['hardworking', 'practical'],
+    });
+    const topFive = rankVehicles(cityWorker, 5).map((item) => item.vehicle);
+    assert.ok(!topFive.includes('dloader'), topFive.join(', '));
+    assert.ok(!topFive.includes('rebel'), topFive.join(', '));
+  });
+
+  it('Duneloader sadece rural hurda/kasabadan sehire is profilinde ilk 3e girer', () => {
     const scrapWorker = profile({
       age: 24,
       age_group: 'adult',
@@ -321,7 +339,7 @@ describe('rankVehicles', () => {
       career_stage: 'stable_worker',
       life_stage: 'early_career',
       vehicle_purpose: 'equipment_transport',
-      vehicle_need: 'Blaine County ve Sandy Shores civarinda babasi hurda sahasi isletiyor, kaynak cekici motor tamiri ve hurda parca tasima isi',
+      vehicle_need: 'Blaine County ve Sandy Shores civarinda hurda sahasi isletiyor, kaynak cekici motor tamiri yapar, kasabadan sehire hurda parca ve ekipman tasima isi',
       dominant_vibes: ['rural', 'sandy_shores', 'scrapper', 'mechanic', 'workhorse'],
       personality: ['hardworking', 'rough', 'practical'],
     });
@@ -329,7 +347,7 @@ describe('rankVehicles', () => {
     assert.ok(topThree.includes('dloader'), topThree.join(', '));
   });
 
-  it('South LS ama sucsuz working-class aile lowrider/muscle otomatik almaz', () => {
+  it('sehir ici ama sucsuz working-class aile lowrider/muscle otomatik almaz', () => {
     const workingClass = profile({
       age: 23,
       age_group: 'young',
@@ -340,7 +358,7 @@ describe('rankVehicles', () => {
       financial_pressure: 'medium',
       family_support: 'stable',
       vehicle_purpose: 'daily_commute',
-      vehicle_need: 'South LS mahallesinde buyudu, annesi babasi calisiyor, suc gecmisi yok, ise gidip gelmek icin sade arac',
+      vehicle_need: 'sehir ici mahallede buyudu, ailesi calisiyor, suc gecmisi yok, ise gidip gelmek icin sade arac',
       dominant_vibes: ['working_class', 'practical', 'low_profile', 'urban'],
       personality: ['modest', 'practical'],
     });

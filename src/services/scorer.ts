@@ -82,8 +82,10 @@ const PURPOSE_TAGS: Record<string, string[]> = {
 const HOBBY_ONLY_KEYWORDS = ['basketbol', 'basketball', 'futbol', 'spor', 'music', 'müzik', 'muzik', 'dans'];
 const VEHICLE_SKILL_KEYWORDS = ['garaj', 'kaplama', 'ses sistemi', 'tamir', 'mekanik', 'modifiye', 'parça', 'parca'];
 const PERFORMANCE_VIBES = ['racer', 'street_meet', 'entry_tuner', 'powerful', 'flashy', 'high_status'];
-const URBAN_CUSTOMS_KEYWORDS = ['chamberlain', 'south ls', 'los santos', 'şehir', 'sehir', 'mahalle', 'ses sistemi', 'kaplama', 'wrap', 'folyo', 'müşteri', 'musteri'];
+const URBAN_CUSTOMS_KEYWORDS = ['los santos', 'şehir', 'sehir', 'şehir içi', 'sehir ici', 'şehirli', 'sehirli', 'mahalle', 'ses sistemi', 'kaplama', 'wrap', 'folyo', 'müşteri', 'musteri'];
 const RURAL_SCRAP_KEYWORDS = ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'hurda', 'hurdacı', 'hurdaci', 'scrap', 'scrapper', 'çiftçi', 'ciftci', 'tarla', 'kaynak', 'çekici', 'cekici'];
+const TOWN_TO_CITY_WORK_KEYWORDS = ['kasabadan şehire', 'kasabadan sehire', 'şehir dışı', 'sehir disi', 'şehir dışından', 'sehir disindan', 'kasaba işi', 'kasaba isi', 'blaine county', 'sandy shores', 'grapeseed', 'paleto'];
+const RURAL_ONLY_VEHICLES = ['dloader', 'rebel'];
 
 const REGION_KEYWORDS: Record<string, string[]> = {
   rural: ['sandy shores', 'grapeseed', 'paleto', 'blaine county', 'kasaba', 'kırsal', 'kirsal', 'çiftçi', 'ciftci'],
@@ -157,11 +159,24 @@ function isUrbanCustomsProfile(profile: CharacterProfile): boolean {
     && keywordHit(text, ['garaj', 'kaplama', 'ses sistemi', 'tamir', 'mekanik', 'parça', 'parca']);
 }
 
-function isRuralScrapProfile(profile: CharacterProfile): boolean {
+function isTownToCityWorkProfile(profile: CharacterProfile): boolean {
   const text = profileSearchText(profile);
-  return profile.origin === 'rural'
-    || keywordHit(text, RURAL_SCRAP_KEYWORDS)
-    || profile.dominant_vibes.some((v) => ['rural', 'sandy_shores', 'scrapper', 'farmer', 'miner'].includes(v));
+  const hasRuralBase = profile.origin === 'rural'
+    || profile.origin === 'small_town'
+    || keywordHit(text, TOWN_TO_CITY_WORK_KEYWORDS)
+    || profile.dominant_vibes.some((v) => ['rural', 'small_town', 'sandy_shores', 'scrapper', 'farmer', 'miner'].includes(v));
+  const hasWorkPurpose = profile.vehicle_purpose === 'work'
+    || profile.vehicle_purpose === 'equipment_transport'
+    || keywordHit(text, PURPOSE_KEYWORDS.work)
+    || keywordHit(text, PURPOSE_KEYWORDS.equipment_transport);
+  return hasRuralBase && hasWorkPurpose;
+}
+
+function ruralOnlyVehicleScore(profile: CharacterProfile, vehicle: VehicleEntry): number {
+  if (!RURAL_ONLY_VEHICLES.includes(vehicle.model)) return 0;
+  if (isTownToCityWorkProfile(profile)) return 35;
+  if (profile.origin === 'urban' || keywordHit(profileSearchText(profile), URBAN_CUSTOMS_KEYWORDS)) return -140;
+  return -80;
 }
 
 function inferVehiclePurposes(profile: CharacterProfile): string[] {
@@ -201,7 +216,7 @@ function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number 
 
     if (purpose === 'equipment_transport') {
       if (vehicle.class === 'van' || vehicle.class === 'pickup') score += 25;
-      if (vehicle.class === 'offroad') score += isRuralScrapProfile(profile) ? 25 : -30;
+      if (vehicle.class === 'offroad') score += isTownToCityWorkProfile(profile) ? 25 : -40;
       if (vehicle.class === 'sports' || vehicle.flashiness >= 5) score -= 55;
       if (vehicle.class === 'compact' || vehicle.class === 'bmx' || vehicle.class === 'motorcycle') score -= 20;
     }
@@ -218,7 +233,7 @@ function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number 
 
     if (purpose === 'work') {
       if (vehicle.class === 'van' || hasUtilityTag(vehicle, ['work_truck', 'service_vehicle', 'fleet_vehicle'])) score += 20;
-      if (vehicle.class === 'offroad') score += isRuralScrapProfile(profile) ? 20 : -20;
+      if (vehicle.class === 'offroad') score += isTownToCityWorkProfile(profile) ? 20 : -35;
       if (vehicle.flashiness >= 5) score -= 30;
     }
   }
@@ -232,6 +247,8 @@ function purposeScore(profile: CharacterProfile, vehicle: VehicleEntry): number 
       score += 35;
     }
   }
+
+  score += ruralOnlyVehicleScore(profile, vehicle);
 
   return score;
 }

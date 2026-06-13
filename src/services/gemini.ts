@@ -32,9 +32,10 @@ Kurallar:
 - Ekonomik gercekcilik vibe'dan once gelir: gelir, yas, aile destegi, kariyer evresi, bolge ve kullanim amaci ana karar sinyalleridir.
 - "Arabalari seviyor", "hiz seviyor", "modifiye seviyor" tek basina pahali JDM/sports/muscle sinyali degildir. Para, is ve proje/garaj baglami yoksa bunu sadece zayif hobi sinyali say.
 - Hobi ile meslegi ayir: basketbol, spor, muzik, dans gibi hobiler arac sinifi secimini belirlemez. Garajda buyudu, kaplama yapiyor, ses sistemi kuruyor, parca/ekipman tasiyor, tamir isi yapiyor gibi detaylar vehicle_purpose icin onemlidir.
-- South LS/mahalle gecmisi otomatik lowrider, muscle veya suclu anlamina gelmez. Ailesi calisan, suc gecmisi olmayan karakter working_class/practical/low_profile okunmalidir.
-- Chamberlain/South LS/Los Santos + babasinin garaji + ses sistemi/kaplama/mahalle musterisi = sehirli customs/service profili. Bunu Sandy Shores/Grapeseed/Blaine County hurda/ciftci/offroad profili gibi okuma.
+- Mahalle veya sehir ici gecmis otomatik lowrider, muscle veya suclu anlamina gelmez. Ailesi calisan, suc gecmisi olmayan karakter working_class/practical/low_profile okunmalidir.
+- Sehir ici mahalle + aile/usta garaji + ses sistemi/kaplama/mahalle musterisi = sehirli customs/service profili. Bunu Sandy Shores/Grapeseed/Blaine County hurda/ciftci/offroad profili gibi okuma.
 - Duneloader tarzı kirsal hurda/workhorse sinyali sadece hurda sahasi, kaynak, cekici, ciftcilik, Blaine County, Sandy Shores, Grapeseed veya kirsal parca tasima aciksa mantiklidir.
+- Duneloader/Rusty Rebel gibi Los Santos icinde normalde gorulmeyecek kirsal-hurda araclari zor ver: hikaye neredeyse tamamen ise odakli, kasaba/Blaine cikisli ve sehir-kasaba arasi ekipman/parca tasiyan bir karakter degilse bu sinyali verme.
 - Dusuk gelir + ogrenci/yeni isci/kasiyer/kurye/yeni tamirci = first_vehicle veya early_career; pahali/performance arac bugunku arac degil, ancak basari sonrasi hedef olabilir.
 - Ses sistemi, kaplama, tesisat, elektrik, insaat, kargo veya ekipman tasima = vehicle_purpose "equipment_transport" veya "work"; pickup/van/service/fleet sinyali ver.
 - Ama hikayede gercekci kasa tipi/kullanim amaci yaziyorsa (SUV, pickup, van, bisiklet, karavan, lowrider, motor) vehicle_need icinde belirt.
