@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadVehicleCatalog, rankVehicles, scoreVehicle } from '../src/services/scorer.js';
+import {
+  diversifyCloseRecommendations,
+  loadVehicleCatalog,
+  rankVehicles,
+  scoreVehicle,
+} from '../src/services/scorer.js';
 import type { CharacterProfile } from '../src/types.js';
 
 loadVehicleCatalog();
@@ -210,5 +215,37 @@ describe('rankVehicles', () => {
       assert.ok(item.score >= 0 && item.score <= 100);
       assert.ok(item.reason.length > 10);
     }
+  });
+});
+
+describe('diversifyCloseRecommendations', () => {
+  const closeRecommendations = [
+    { vehicle: 'premier', label: 'Declasse Premier', score: 100, reason: 'a' },
+    { vehicle: 'stanier', label: 'Vapid Stanier', score: 100, reason: 'b' },
+    { vehicle: 'impaler', label: 'Declasse Impaler', score: 98, reason: 'c' },
+    { vehicle: 'bjxl', label: 'Karin BeeJay XL', score: 96, reason: 'd' },
+    { vehicle: 'voodoo', label: 'Declasse Voodoo', score: 80, reason: 'e' },
+  ];
+
+  it('top skora 5 puan yakin adaylari seed ile cesitlendirir', () => {
+    const firstVehicles = new Set(
+      Array.from({ length: 20 }, (_, i) =>
+        diversifyCloseRecommendations(closeRecommendations, `seed-${i}`)[0].vehicle,
+      ),
+    );
+    assert.ok(firstVehicles.size > 1);
+    assert.ok(!firstVehicles.has('voodoo'));
+  });
+
+  it('5 puandan uzak adaylari yakin skor havuzuna sokmaz', () => {
+    const diversified = diversifyCloseRecommendations(closeRecommendations, 'seed-1');
+    assert.equal(diversified[diversified.length - 1].vehicle, 'voodoo');
+  });
+
+  it('ayni seed ayni siralamayi uretir', () => {
+    assert.deepEqual(
+      diversifyCloseRecommendations(closeRecommendations, 'same-seed'),
+      diversifyCloseRecommendations(closeRecommendations, 'same-seed'),
+    );
   });
 });

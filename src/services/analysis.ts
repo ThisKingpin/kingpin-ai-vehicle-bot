@@ -2,7 +2,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { analyzeStoryWithGemini } from './gemini.js';
 import { analyzeStoryFallback } from './openai.js';
 import { getCache } from './fivem.js';
-import { loadVehicleCatalog, mergeRecommendations, needsManualReview, rankVehicles } from './scorer.js';
+import {
+  diversifyCloseRecommendations,
+  loadVehicleCatalog,
+  mergeRecommendations,
+  needsManualReview,
+  rankVehicles,
+} from './scorer.js';
 import { env } from '../env.js';
 import type { AiAnalysis, PendingRequest, ScoredVehicle } from '../types.js';
 
@@ -77,10 +83,14 @@ export async function runAnalysis(params: {
   let analysis: AiAnalysis;
   analysis = await analyzeStory(params.story);
 
-  const ranked = mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5));
+  const requestId = randomUUID();
+  const ranked = diversifyCloseRecommendations(
+    mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5)),
+    `${requestId}:${params.citizenid}:${storyHash}`,
+  );
 
   return {
-    requestId: randomUUID(),
+    requestId,
     grantToken: '',
     citizenid: params.citizenid,
     characterName: params.characterName,

@@ -292,6 +292,52 @@ export function rankVehicles(profile: CharacterProfile, limit = 5): ScoredVehicl
   return scored.slice(0, limit).map(({ rawScore: _raw, ...item }) => item);
 }
 
+function hashSeed(seed: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: string): () => number {
+  let state = hashSeed(seed) || 1;
+  return () => {
+    state = Math.imul(state ^ (state >>> 15), 1 | state);
+    state ^= state + Math.imul(state ^ (state >>> 7), 61 | state);
+    return ((state ^ (state >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(items: T[], seed: string): T[] {
+  const shuffled = [...items];
+  const random = seededRandom(seed);
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+export function diversifyCloseRecommendations(
+  recommendations: ScoredVehicle[],
+  seed: string,
+  maxScoreGap = 5,
+): ScoredVehicle[] {
+  if (recommendations.length < 2) return recommendations;
+
+  const topScore = recommendations[0].score;
+  const closeCount = recommendations.findIndex((item) => topScore - item.score > maxScoreGap);
+  const splitIndex = closeCount === -1 ? recommendations.length : closeCount;
+  if (splitIndex < 2) return recommendations;
+
+  return [
+    ...shuffleWithSeed(recommendations.slice(0, splitIndex), seed),
+    ...recommendations.slice(splitIndex),
+  ];
+}
+
 export function mergeRecommendations(
   analysis: AiAnalysis,
   ranked: ScoredVehicle[],
