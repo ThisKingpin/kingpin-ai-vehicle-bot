@@ -18,7 +18,7 @@ export const aracalCommand = {
     .addStringOption((opt) =>
       opt
         .setName('konu_id')
-        .setDescription('Forum hikaye konusu ID (sag tik → Konu ID\'sini Kopyala)')
+        .setDescription('Forum hikaye konusu ID (PDF/DOCX/TXT ekleri de okunur)')
         .setRequired(false),
     )
     .addStringOption((opt) =>

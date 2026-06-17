@@ -1,8 +1,10 @@
 import {
+  type Attachment,
   type Client,
   type Message,
   type ThreadChannel,
 } from 'discord.js';
+import { fetchStoryAttachmentText } from './attachment-text.js';
 import { env } from '../env.js';
 
 const STORY_MIN = 50;
@@ -34,6 +36,43 @@ function messageToText(message: Message): string {
     }
   }
 
+  return parts.join('\n\n').trim();
+}
+
+async function parseAttachment(attachment: Attachment): Promise<string> {
+  return fetchStoryAttachmentText(
+    attachment.url,
+    attachment.name ?? 'ek',
+    attachment.contentType,
+    attachment.size,
+  );
+}
+
+async function extractMessageStory(message: Message): Promise<string> {
+  const parts: string[] = [];
+  const body = messageToText(message);
+  if (body) parts.push(body);
+
+  for (const attachment of message.attachments.values()) {
+    try {
+      const fileText = await parseAttachment(attachment);
+      if (fileText) {
+        parts.push(`[Dosya: ${attachment.name}]\n${fileText}`);
+      }
+    } catch (err) {
+      console.warn(`[story-fetch] Ek okunamadi (${attachment.name}):`, err);
+    }
+  }
+
+  return parts.join('\n\n').trim();
+}
+
+async function combineMessagesStory(messages: Message[]): Promise<string> {
+  const parts: string[] = [];
+  for (const message of messages) {
+    const chunk = await extractMessageStory(message);
+    if (chunk) parts.push(chunk);
+  }
   return parts.join('\n\n').trim();
 }
 
@@ -77,32 +116,31 @@ function assertAllowedForum(thread: ThreadChannel) {
   }
 }
 
-async function fetchFromThread(client: Client, thread: ThreadChannel): Promise<string> {
+async function fetchFromThread(_client: Client, thread: ThreadChannel): Promise<string> {
   assertAllowedForum(thread);
 
-  let text = '';
+  let messages: Message[] = [];
 
   try {
-    const starter = await thread.fetchStarterMessage();
-    if (starter) text = messageToText(starter);
+    const fetched = await thread.messages.fetch({ limit: 25 });
+    messages = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
   } catch (err) {
-    console.warn('[story-fetch] Starter message okunamadi, thread mesajlari deneniyor:', err);
+    console.warn('[story-fetch] Thread mesajlari okunamadi, starter deneniyor:', err);
   }
 
-  if (text.length < STORY_MIN) {
+  if (messages.length === 0) {
     try {
-      const messages = await thread.messages.fetch({ limit: 25 });
-      const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-      const combined = sorted.map(messageToText).filter(Boolean).join('\n\n');
-      if (combined.length > text.length) text = combined;
-    } catch (err) {
-      throw new StoryFetchError(`Konu mesajlari okunamadi. ${FORUM_PERMISSION_HINT}`);
+      const starter = await thread.fetchStarterMessage();
+      if (starter) messages = [starter];
+    } catch {
+      // ignore
     }
   }
 
+  const text = await combineMessagesStory(messages);
   if (!text) {
     throw new StoryFetchError(
-      `Konu icerigi okunamadi. ${FORUM_PERMISSION_HINT}`,
+      `Konu icerigi okunamadi. Metin yazin veya PDF/DOCX/TXT ekleyin. ${FORUM_PERMISSION_HINT}`,
     );
   }
 
@@ -166,7 +204,13 @@ async function fetchFromLink(
 
     if (channel && 'messages' in channel) {
       const message = await channel.messages.fetch(parsed.messageId);
-      return validateStory(messageToText(message));
+      const text = await extractMessageStory(message);
+      if (!text) {
+        throw new StoryFetchError(
+          `Mesajda okunabilir metin veya PDF/DOCX/TXT eki yok. ${FORUM_PERMISSION_HINT}`,
+        );
+      }
+      return validateStory(text);
     }
 
     throw new StoryFetchError(`Mesaj kanali okunamadi. ${FORUM_PERMISSION_HINT}`);
