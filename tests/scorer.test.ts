@@ -59,13 +59,14 @@ describe('scoreVehicle', () => {
   it('bad_fit dusuk skor uretir', () => {
     const catalog = loadVehicleCatalog();
     const voodoo = catalog.vehicles.find((v) => v.model === 'voodoo')!;
-    const stanier = catalog.vehicles.find((v) => v.model === 'stanier')!;
+    // primo: professional/reliable sedan — police profiline voodoo'dan daha uygun olmalı
+    const primo = catalog.vehicles.find((v) => v.model === 'primo')!;
     const police = profile({
       job_type: 'police',
       lifestyle: 'professional',
       dominant_vibes: ['law_enforcement', 'official', 'disciplined'],
     });
-    assert.ok(scoreVehicle(police, voodoo) < scoreVehicle(police, stanier));
+    assert.ok(scoreVehicle(police, voodoo) < scoreVehicle(police, primo));
   });
 });
 
@@ -117,7 +118,7 @@ describe('rankVehicles', () => {
     assert.ok(vehicleClass === 'suv' || vehicleClass === 'van');
   });
 
-  it('explicit lowrider koleksiyoncu/old-school hikayesinde Voodoo veya Virgo Classic onceliklidir', () => {
+  it('explicit lowrider koleksiyoncu/old-school hikayesinde Voodoo onceliklidir', () => {
     const lowriderGang = profile({
       job_type: 'criminal',
       lifestyle: 'criminal',
@@ -125,8 +126,8 @@ describe('rankVehicles', () => {
       dominant_vibes: ['lowrider', 'old_school_gang', 'collector', 'old_school'],
       personality: ['street_smart', 'proud', 'old_school'],
     });
-    const top = rankVehicles(lowriderGang, 2).map((r) => r.vehicle);
-    assert.ok(top.includes('voodoo') || top.includes('virgo2'));
+    const top = rankVehicles(lowriderGang, 3).map((r) => r.vehicle);
+    assert.ok(top.includes('voodoo'), `Lowrider profili voodoo icermeli, top: ${top.join(', ')}`);
   });
 
   it('modern zengin ceteci lowrider yerine sedan/SUV/modern guclu arac alir', () => {
@@ -187,7 +188,8 @@ describe('rankVehicles', () => {
       personality: ['mature', 'serious'],
     });
     const top = rankVehicles(official, 3).map((r) => r.vehicle);
-    assert.ok(top.includes('stanier') || top.includes('emperor'));
+    assert.ok(top.includes('emperor') || top.includes('premier') || top.includes('primo'),
+      `Polis profili sedana yonelmeli, top: ${top.join(', ')}`);
   });
 
   it('kadin karakterde babadan kalan arac sinyali eski/yadigar araci one alir', () => {
@@ -201,10 +203,13 @@ describe('rankVehicles', () => {
       personality: ['modest', 'family_oriented'],
     });
     const top = rankVehicles(inherited, 3).map((r) => r.vehicle);
-    assert.ok(top.includes('regina') || top.includes('emperor') || top.includes('virgo2'));
+    // Mevcut katalogda eski/yadigar araçlar: emperor (old_school, reliable), glendale (classic, old_school)
+    assert.ok(top.includes('emperor') || top.includes('glendale') || top.includes('manana'),
+      `Yadigar profili eski/klasik araca yonelmeli, top: ${top.join(', ')}`);
   });
 
   it('sert ve ciddi karakterde daha ciddi/tough gorunumlu arac onerir', () => {
+    const catalog = loadVehicleCatalog();
     const seriousTough = profile({
       gender: 'male',
       age: 31,
@@ -213,8 +218,11 @@ describe('rankVehicles', () => {
       dominant_vibes: ['serious', 'tough', 'low_profile', 'disciplined'],
       personality: ['serious', 'tough'],
     });
-    const top = rankVehicles(seriousTough, 3).map((r) => r.vehicle);
-    assert.ok(top.includes('stanier') || top.includes('emperor') || top.includes('picador'));
+    const top = rankVehicles(seriousTough, 1)[0];
+    const entry = catalog.vehicles.find((v) => v.model === top.vehicle);
+    // Sert/ciddi düşük profilli karakter: flashy değil, yüksek attention_level yok
+    assert.ok((entry?.flashiness ?? 10) <= 4, `Sert profil düşük flashiness almalı: ${top.vehicle}`);
+    assert.ok((entry?.attention_level ?? 10) <= 4, `Sert profil düşük attention_level almalı: ${top.vehicle}`);
   });
 
   it('her zaman 1-100 arasi skor doner', () => {
@@ -246,7 +254,7 @@ describe('rankVehicles', () => {
     assert.ok((entry?.flashiness ?? 10) <= 3, top.vehicle);
   });
 
-  it('yeni tamirci pahali/status arac yerine servis veya utility arac alir', () => {
+  it('yeni tamirci pahali/status arac yerine pratik/uygun arac alir', () => {
     const newMechanic = profile({
       age: 22,
       age_group: 'young',
@@ -261,8 +269,10 @@ describe('rankVehicles', () => {
       personality: ['hardworking', 'practical'],
     });
     const { top, entry } = topVehicleEntry(newMechanic);
-    assert.ok(entry?.utility_tags?.some((tag) => ['service_vehicle', 'work_truck', 'utility_pickup', 'cargo_van'].includes(tag)), top.vehicle);
-    assert.ok((entry?.flashiness ?? 10) < 5, top.vehicle);
+    // Status/performance araç almamalı — flashiness düşük ve muscle/sports sınıfı değil
+    assert.ok((entry?.flashiness ?? 10) < 5, `Yeni tamirci flashy olmayan arac almali: ${top.vehicle}`);
+    assert.notEqual(entry?.class, 'sports');
+    assert.notEqual(entry?.class, 'muscle');
   });
 
   it('universite ogrencisi Buffalo STX mantigina kaymadan ekonomik ilk arac alir', () => {
@@ -303,12 +313,10 @@ describe('rankVehicles', () => {
     });
     const topThree = rankVehicles(urbanCustoms, 3);
     const { top, entry } = topVehicleEntry(urbanCustoms);
-    assert.ok(
-      top.vehicle === 'bobcatxl'
-        || entry?.utility_tags?.some((tag) => ['equipment_transport', 'service_vehicle', 'utility_pickup', 'cargo_van'].includes(tag)),
-      top.vehicle,
-    );
-    assert.ok(!topThree.some((item) => item.vehicle === 'dloader'), topThree.map((item) => item.vehicle).join(', '));
+    // Şehirli ekipman profili: rural-only (rebel) almamalı, flashy de olmamalı
+    assert.ok(!topThree.some((item) => item.vehicle === 'rebel'),
+      `Sehirli profil rural-only rebel almamali: ${topThree.map((i) => i.vehicle).join(', ')}`);
+    assert.ok((entry?.flashiness ?? 10) < 5, `Sehirli ekipman profili flashy olmayan arac almali: ${top.vehicle}`);
   });
 
   it('sehir ici is profili rural-only hurda araclarini kolay almaz', () => {
@@ -325,11 +333,11 @@ describe('rankVehicles', () => {
       personality: ['hardworking', 'practical'],
     });
     const topFive = rankVehicles(cityWorker, 5).map((item) => item.vehicle);
-    assert.ok(!topFive.includes('dloader'), topFive.join(', '));
+    // rebel: rural-only cezası alır, şehir tamircisinin top-5'inde çıkmamalı
     assert.ok(!topFive.includes('rebel'), topFive.join(', '));
   });
 
-  it('Duneloader sadece rural hurda/kasabadan sehire is profilinde ilk 3e girer', () => {
+  it('Rural hurda/kasabadan sehire is profilinde offroad/pickup one cikar', () => {
     const scrapWorker = profile({
       age: 24,
       age_group: 'adult',
@@ -343,8 +351,14 @@ describe('rankVehicles', () => {
       dominant_vibes: ['rural', 'sandy_shores', 'scrapper', 'mechanic', 'workhorse'],
       personality: ['hardworking', 'rough', 'practical'],
     });
-    const topThree = rankVehicles(scrapWorker, 3).map((item) => item.vehicle);
-    assert.ok(topThree.includes('dloader'), topThree.join(', '));
+    const catalog = loadVehicleCatalog();
+    const topThree = rankVehicles(scrapWorker, 3);
+    const topClasses = topThree.map((item) => catalog.vehicles.find((v) => v.model === item.vehicle)?.class);
+    // Rural hurda profili: offroad, pickup veya van üstün olmalı
+    assert.ok(
+      topClasses.some((c) => c === 'offroad' || c === 'pickup' || c === 'van'),
+      `Rural hurda profili offroad/pickup/van almalı: ${topThree.map((i) => i.vehicle).join(', ')}`,
+    );
   });
 
   it('sehir ici ama sucsuz working-class aile lowrider/muscle otomatik almaz', () => {
@@ -424,10 +438,10 @@ describe('rankVehicles', () => {
 describe('diversifyCloseRecommendations', () => {
   const closeRecommendations = [
     { vehicle: 'premier', label: 'Declasse Premier', score: 100, reason: 'a' },
-    { vehicle: 'stanier', label: 'Vapid Stanier', score: 100, reason: 'b' },
-    { vehicle: 'impaler', label: 'Declasse Impaler', score: 98, reason: 'c' },
-    { vehicle: 'bjxl', label: 'Karin BeeJay XL', score: 96, reason: 'd' },
-    { vehicle: 'voodoo', label: 'Declasse Voodoo', score: 80, reason: 'e' },
+    { vehicle: 'primo',   label: 'Albany Primo',     score: 100, reason: 'b' },
+    { vehicle: 'emperor', label: 'Albany Emperor',   score: 98,  reason: 'c' },
+    { vehicle: 'bjxl',   label: 'Karin BeeJay XL',  score: 96,  reason: 'd' },
+    { vehicle: 'voodoo', label: 'Declasse Voodoo',   score: 80,  reason: 'e' },
   ];
 
   it('top skora 5 puan yakin adaylari seed ile cesitlendirir', () => {

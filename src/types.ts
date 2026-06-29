@@ -37,6 +37,9 @@ export interface VehicleEntry {
   model: string;
   label: string;
   class: string;
+  category?: string;
+  price?: number;
+  description?: string;
   price_tier: string;
   vibes: string[];
   fits_jobs: string[];

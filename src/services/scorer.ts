@@ -256,6 +256,27 @@ function priceTierIndex(tier: string): number {
   return { low: 0, lower_mid: 1, mid: 2, upper_mid: 3, high: 4 }[tier] ?? 2;
 }
 
+/** Expected mid-point price (₺) for each income level. Used for fine-grained realism. */
+const INCOME_IDEAL_PRICE: Record<string, number> = {
+  low:        3500,
+  lower_mid:  7000,
+  mid:        11000,
+  upper_mid:  14000,
+  high:       16000,
+};
+
+/** Maps catalog vehicle category to preferred body-class keyword for scoring hints. */
+const CATEGORY_CLASS_HINT: Record<string, string[]> = {
+  suv:         ['suv'],
+  offroad:     ['offroad', 'pickup'],
+  motorcycles: ['motorcycle'],
+  vans:        ['van'],
+  compacts:    ['compact'],
+  muscle:      ['muscle'],
+  sedans:      ['sedan'],
+  foundation:  ['bmx'],
+};
+
 function economicRealismScore(profile: CharacterProfile, vehicle: VehicleEntry): number {
   const incomeIndex = priceTierIndex(profile.income_level);
   const vehicleIndex = priceTierIndex(vehicle.price_tier);
@@ -292,6 +313,15 @@ function economicRealismScore(profile: CharacterProfile, vehicle: VehicleEntry):
   if (earlyStage && performanceVehicle && !justifiedProject) score -= 45;
   if (profile.financial_pressure === 'high' && hasUtilityTag(vehicle, ['starter_car', 'fuel_economy', 'daily_driver'])) score += 25;
   if (profile.family_support === 'wealthy' && vehicle.price_tier === 'high') score += 20;
+
+  // Fine-grained price realism: small bonus when actual price is close to income ideal
+  if (vehicle.price !== undefined && vehicle.price > 0) {
+    const idealPrice = INCOME_IDEAL_PRICE[profile.income_level] ?? 10000;
+    const priceGapRatio = Math.abs(vehicle.price - idealPrice) / idealPrice;
+    if (priceGapRatio <= 0.15) score += 10;      // within 15% of ideal: bonus
+    else if (priceGapRatio <= 0.35) score += 4;  // within 35%: small bonus
+    else if (priceGapRatio > 0.80) score -= 8;   // very far off: small penalty
+  }
 
   return score;
 }
@@ -352,8 +382,20 @@ function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: nu
   if (profile.life_stage === 'first_vehicle' || profile.life_stage === 'early_career') reasons.push('karakterin mevcut yasam evresine uygun');
   if (shared.length > 0) reasons.push(`${shared.join(', ')} hikaye sinyalleriyle uyumlu`);
   if (reasons.length === 0) reasons.push(`${profile.lifestyle} karakter profiline uyumlu`);
-  const ageText = profile.age !== undefined ? ` Yas: ${profile.age}.` : '';
-  return `${vehicle.label}: ${Math.round(score)} puan. ${vehicle.class} / ${vehicle.price_tier} segment.${ageText} Sebepler: ${reasons.slice(0, 5).join('; ')}.`;
+
+  const ageText   = profile.age !== undefined ? ` Yas: ${profile.age}.` : '';
+  const priceText = vehicle.price !== undefined ? ` | ${vehicle.price.toLocaleString('tr-TR')}₺` : '';
+  const catText   = vehicle.category ? ` | ${vehicle.category}` : '';
+
+  // Add a short excerpt from the description as the last reason (first 90 chars)
+  if (vehicle.description && reasons.length < 5) {
+    const excerpt = vehicle.description.length > 90
+      ? vehicle.description.slice(0, 87) + '...'
+      : vehicle.description;
+    reasons.push(excerpt);
+  }
+
+  return `${vehicle.label}${priceText}${catText}: ${Math.round(score)} puan. ${vehicle.class} / ${vehicle.price_tier} segment.${ageText} Sebepler: ${reasons.slice(0, 5).join('; ')}.`;
 }
 
 export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): number {
@@ -459,6 +501,14 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
     score += 45;
   } else if (bodyClassConflictsPreference(vehicle.class, preferredBodies)) {
     score -= 45;
+  }
+
+  // Category hint: cross-check vehicle.category against preferred body classes for extra signal
+  if (vehicle.category) {
+    const catClasses = CATEGORY_CLASS_HINT[vehicle.category] ?? [];
+    if (preferredBodies.length > 0 && catClasses.some((c) => preferredBodies.includes(c))) {
+      score += 8;
+    }
   }
 
   if (profile.age !== undefined && profile.age < 16 && vehicle.class !== 'bmx') {
