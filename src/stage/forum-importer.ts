@@ -171,17 +171,20 @@ async function saveThread(pool: Pool | null, form: ParsedThreadForm): Promise<bo
   return enqueueStageImport(form);
 }
 
-async function processThread(pool: Pool | null, thread: ThreadChannel, forumChannelId: string): Promise<void> {
+async function processThread(pool: Pool | null, thread: ThreadChannel, forumChannelId: string): Promise<'queued' | 'empty' | 'skipped'> {
   const form = await parseThread(thread, forumChannelId);
   const saved = await saveThread(pool, form);
-  if (!saved) return;
+  if (!saved) return 'skipped';
 
-  const mode = pool ? 'mysql' : 'queue';
   const storyLen = form.storyText?.length ?? 0;
-  const warnEmpty = storyLen === 0 ? ' | UYARI: hikaye metni bos' : '';
-  console.log(
-    `[stage/forum-importer] Import (${mode}): ${form.threadId} "${form.threadTitle ?? ''}" → ${form.status} | story: ${storyLen} chars${warnEmpty}`,
-  );
+  if (storyLen === 0) {
+    console.warn(
+      `[stage/forum-importer] Bos hikaye: ${form.threadId} "${form.threadTitle ?? ''}" (PDF/izin kontrol et)`,
+    );
+    return 'empty';
+  }
+
+  return 'queued';
 }
 
 async function bulkImport(client: Client, pool: Pool | null, forumChannelId: string): Promise<void> {
@@ -199,14 +202,19 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
   }
 
   let imported = 0;
+  let queued = 0;
+  let empty = 0;
 
   try {
     const active = await channel.threads.fetchActive();
     for (const thread of active.threads.values()) {
-      await processThread(pool, thread, forumChannelId).catch((e) =>
-        console.warn('[stage/forum-importer] Thread isleme hatasi:', e),
-      );
+      const result = await processThread(pool, thread, forumChannelId).catch((e) => {
+        console.warn('[stage/forum-importer] Thread isleme hatasi:', e);
+        return 'skipped' as const;
+      });
       imported++;
+      if (result === 'queued') queued++;
+      else if (result === 'empty') empty++;
     }
   } catch (e) {
     logDiscordAccessError('Aktif threadler alinamadi', e);
@@ -224,10 +232,13 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
         const archived = await channel.threads.fetchArchived({ limit: 100, before });
         archivedOk = true;
         for (const thread of archived.threads.values()) {
-          await processThread(pool, thread, forumChannelId).catch((e) =>
-            console.warn('[stage/forum-importer] Thread isleme hatasi:', e),
-          );
+          const result = await processThread(pool, thread, forumChannelId).catch((e) => {
+            console.warn('[stage/forum-importer] Thread isleme hatasi:', e);
+            return 'skipped' as const;
+          });
           imported++;
+          if (result === 'queued') queued++;
+          else if (result === 'empty') empty++;
         }
         if (!archived.hasMore) break;
         before = archived.threads.last()?.id;
@@ -242,7 +253,9 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
     }
   }
 
-  console.log(`[stage/forum-importer] Bulk import tamamlandi: ${imported} thread islendi.`);
+  console.log(
+    `[stage/forum-importer] Bulk import ozet: ${imported} thread, ${queued} kuyruk, ${empty} bos hikaye`,
+  );
 }
 
 /** pool=null → pull modu (FiveM MySQL'e yazar). pool varsa legacy direct MySQL. */
@@ -264,7 +277,10 @@ export function startForumImporter(client: Client, pool: Pool | null): void {
     if (thread.parentId !== forumChannelId) return;
     await new Promise((r) => setTimeout(r, 3000));
     try {
-      await processThread(pool, thread, forumChannelId);
+      const result = await processThread(pool, thread, forumChannelId);
+      if (result === 'empty') {
+        console.warn(`[stage/forum-importer] Yeni konu bos hikaye: ${thread.id} "${thread.name}"`);
+      }
     } catch (e) {
       console.error('[stage/forum-importer] Yeni thread isleme hatasi:', e);
     }
