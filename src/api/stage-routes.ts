@@ -59,13 +59,15 @@ export async function handleStageRoute(
     }
 
     if (!body.threadId) {
-      sendJson(res, 400, { error: 'threadId gerekli' });
+      sendJson(res, 400, { success: false, error: 'threadId gerekli' });
       return true;
     }
 
     const story = body.story?.trim() ?? '';
     if (!story) {
-      sendJson(res, 400, { success: false, error: 'story gerekli' });
+      const err = 'Hikaye metni bos — forum mesaji veya PDF okunamamis olabilir.';
+      console.error(`[stage/analyze] Start reddedildi (${body.threadId}): ${err}`);
+      sendJson(res, 400, { success: false, error: err });
       return true;
     }
 
