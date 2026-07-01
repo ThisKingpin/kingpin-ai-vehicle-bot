@@ -724,6 +724,25 @@
       "realism_score": 8
     },
     {
+      "model": "bmx",
+      "label": "BMX",
+      "class": "bmx",
+      "category": "foundation",
+      "price": 350,
+      "price_tier": "low",
+      "description": "Ehliyetsiz veya bütçesi kısıtlı karakterler için temel ulaşım aracı. Genç, aktif ve şehir içi kısa mesafe kullanımı için ideal.",
+      "min_age": 0,
+      "license_type": "bicycle",
+      "vibes": ["youth", "sport", "student", "city", "active", "no_license", "budget"],
+      "fits_jobs": ["student", "courier", "civilian", "unemployed"],
+      "fits_personality": ["active", "young", "rebellious", "urban"],
+      "bad_fits": ["official", "family_man", "rural_work", "rich", "mature"],
+      "utility_tags": ["starter_car", "daily_driver", "fuel_economy"],
+      "flashiness": 2,
+      "attention_level": 2,
+      "realism_score": 8
+    },
+    {
       "model": "cruiser",
       "label": "Cruiser",
       "class": "bmx",

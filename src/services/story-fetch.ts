@@ -8,9 +8,18 @@ import { fetchStoryAttachmentText } from './attachment-text.js';
 import { env } from '../env.js';
 
 const STORY_MIN = 50;
-const STORY_MAX = 12000;
+const STORY_MAX_DEFAULT = 20000;
 
-export { STORY_MIN, STORY_MAX };
+function parseStoryMax(): number {
+  const raw = env('STORY_MAX');
+  if (!raw) return STORY_MAX_DEFAULT;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n >= STORY_MIN ? n : STORY_MAX_DEFAULT;
+}
+
+const STORY_MAX = parseStoryMax();
+
+export { STORY_MIN, STORY_MAX, STORY_MAX_DEFAULT };
 
 const FORUM_PERMISSION_HINT =
   'Botun konuyu mention olmadan okuyabilmesi icin bot rolunde forum kanalinda View Channel ve Read Message History yetkileri olmali. Private thread kullaniyorsaniz bot rolune thread erisimi verin veya konuyu public forum post olarak acin.';

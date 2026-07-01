@@ -7,10 +7,20 @@ import { handleButtonInteraction } from './handlers/buttons.js';
 import { env, getDiscordToken, maskToken } from './env.js';
 import { pingBridgeOnStartup } from './services/fivem.js';
 import { startApiServer } from './api/server.js';
+import { initStagePool } from './stage/db.js';
+import { startForumImporter } from './stage/forum-importer.js';
+import { startAnalyzerWorker } from './stage/analyzer-worker.js';
 
 const commands = [aracalCommand, aracLogCommand, aracYenidenAnalizCommand];
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// Stage servisleri için GuildMessages + MessageContent intent gerekir
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
 const commandMap = new Collection<string, (typeof commands)[number]>();
 for (const cmd of commands) {
@@ -109,6 +119,16 @@ async function main() {
   }
 
   await pingBridgeOnStartup();
+
+  // ── STAGE Servisleri ──────────────────────────────────────────────────────
+  const stagePool = initStagePool();
+  if (stagePool) {
+    console.log('[stage] DB bağlantısı kuruldu — forum importer ve analiz worker başlatılıyor.');
+    startForumImporter(client, stagePool);
+    startAnalyzerWorker(stagePool);
+  } else {
+    console.log('[stage] STAGE_DB_HOST tanımlanmamış — stage servisleri devre dışı.');
+  }
 }
 
 main().catch((err) => {
