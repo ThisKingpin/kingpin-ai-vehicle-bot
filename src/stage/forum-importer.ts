@@ -30,6 +30,26 @@ const NAME_PATTERNS = [
 
 const STORY_MAX = Number(env('STORY_MAX') ?? '20000');
 
+function logDiscordAccessError(scope: string, err: unknown): void {
+  const code = err && typeof err === 'object' && 'code' in err
+    ? Number((err as { code: number }).code)
+    : null;
+
+  if (code === 50001) {
+    console.warn(`[stage/forum-importer] ${scope}: Missing Access (50001).`);
+    console.warn(
+      '[stage/forum-importer] Cozum: Bot rolune "karakterler" forum kanalinda su izinleri ver:',
+    );
+    console.warn('  - Kanallari Gor (View Channel)');
+    console.warn('  - Mesaj Gecmisini Oku (Read Message History)');
+    console.warn('  - Konulari Yonet (Manage Threads) — arsiv konulari icin genelde gerekli');
+    console.warn('  Kategori izinlerinde bot rolunun engellenmedigini kontrol et.');
+    return;
+  }
+
+  console.warn(`[stage/forum-importer] ${scope}:`, err);
+}
+
 function extractCharacterName(text: string, title: string): string | null {
   for (const pat of NAME_PATTERNS) {
     const m = text.match(pat);
@@ -156,7 +176,7 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
   try {
     channel = await client.channels.fetch(forumChannelId);
   } catch (e) {
-    console.error('[stage/forum-importer] Forum kanali alinamadi:', e);
+    logDiscordAccessError('Forum kanali alinamadi', e);
     return;
   }
 
@@ -176,26 +196,36 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
       imported++;
     }
   } catch (e) {
-    console.warn('[stage/forum-importer] Aktif threadler alinamadi:', e);
+    logDiscordAccessError('Aktif threadler alinamadi', e);
   }
 
-  let before: string | undefined;
-  let page = 0;
-  while (page < 3) {
-    try {
-      const archived = await channel.threads.fetchArchived({ limit: 100, before });
-      for (const thread of archived.threads.values()) {
-        await processThread(pool, thread, forumChannelId).catch((e) =>
-          console.warn('[stage/forum-importer] Thread isleme hatasi:', e),
-        );
-        imported++;
+  if (env('STAGE_SKIP_ARCHIVED_IMPORT') === '1') {
+    console.log('[stage/forum-importer] Arsiv import atlandi (STAGE_SKIP_ARCHIVED_IMPORT=1).');
+  } else {
+    let before: string | undefined;
+    let page = 0;
+    let archivedOk = false;
+
+    while (page < 3) {
+      try {
+        const archived = await channel.threads.fetchArchived({ limit: 100, before });
+        archivedOk = true;
+        for (const thread of archived.threads.values()) {
+          await processThread(pool, thread, forumChannelId).catch((e) =>
+            console.warn('[stage/forum-importer] Thread isleme hatasi:', e),
+          );
+          imported++;
+        }
+        if (!archived.hasMore) break;
+        before = archived.threads.last()?.id;
+        page++;
+      } catch (e) {
+        logDiscordAccessError('Arsiv threadler alinamadi', e);
+        if (!archivedOk) {
+          console.warn('[stage/forum-importer] Aktif konular import edildi; arsiv atlandi. Yeni konular threadCreate ile yakalanir.');
+        }
+        break;
       }
-      if (!archived.hasMore) break;
-      before = archived.threads.last()?.id;
-      page++;
-    } catch (e) {
-      console.warn('[stage/forum-importer] Arsiv threadler alinamadi:', e);
-      break;
     }
   }
 
