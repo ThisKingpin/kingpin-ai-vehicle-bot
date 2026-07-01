@@ -1,5 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { completeJob, getQueueStats, pullNextJob } from '../services/job-queue.js';
+import { handleStageRoute } from './stage-routes.js';
+import { getStageImportQueueSize } from '../stage/import-queue.js';
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -41,6 +43,7 @@ export function startApiServer(): void {
         ok: true,
         service: 'kingpin-ai-vehicle-bot',
         queue: stats,
+        stageImportQueue: getStageImportQueueSize(),
       });
     }
 
@@ -90,6 +93,12 @@ export function startApiServer(): void {
       if (!ok) return sendJson(res, 404, { error: 'Job bulunamadi veya zaten tamamlandi' });
 
       return sendJson(res, 200, { success: true });
+    }
+
+    if (url.startsWith('/api/stage/')) {
+      if (!authorize(req)) return sendJson(res, 401, { error: 'Yetkisiz' });
+      const handled = await handleStageRoute(req, res, url, method);
+      if (handled) return;
     }
 
     sendJson(res, 404, { error: 'Route bulunamadi' });

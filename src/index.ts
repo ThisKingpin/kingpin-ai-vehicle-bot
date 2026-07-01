@@ -121,13 +121,20 @@ async function main() {
   await pingBridgeOnStartup();
 
   // ── STAGE Servisleri ──────────────────────────────────────────────────────
-  const stagePool = initStagePool();
-  if (stagePool) {
-    console.log('[stage] DB bağlantısı kuruldu — forum importer ve analiz worker başlatılıyor.');
+  const forumChannelId = env('STAGE_FORUM_CHANNEL_ID');
+  if (forumChannelId) {
+    const stagePool = env('STAGE_DB_HOST') ? initStagePool() : null;
     startForumImporter(client, stagePool);
-    startAnalyzerWorker(stagePool);
+
+    if (stagePool) {
+      console.log('[stage] Legacy direct-MySQL modu — analiz worker bot DB uzerinden calisir.');
+      startAnalyzerWorker(stagePool);
+    } else {
+      console.log('[stage] Pull modu — SQL FiveM scriptte; bot sadece Discord + AI API.');
+      console.log('[stage] FiveM server.cfg: ai_vehicle_bot_url + ai_vehicle_secret gerekli.');
+    }
   } else {
-    console.log('[stage] STAGE_DB_HOST tanımlanmamış — stage servisleri devre dışı.');
+    console.log('[stage] STAGE_FORUM_CHANNEL_ID tanimli degil — stage servisleri devre disi.');
   }
 }
 
