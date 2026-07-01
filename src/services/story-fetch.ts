@@ -5,7 +5,7 @@ import {
   type ThreadChannel,
 } from 'discord.js';
 import { fetchStoryAttachmentText } from './attachment-text.js';
-import { env } from '../env.js';
+import { env, getDiscordToken } from '../env.js';
 
 const STORY_MIN = 50;
 const STORY_MAX_DEFAULT = 20000;
@@ -48,23 +48,27 @@ function messageToText(message: Message): string {
   return parts.join('\n\n').trim();
 }
 
-async function parseAttachment(attachment: Attachment): Promise<string> {
+async function parseAttachment(attachment: Attachment, botToken?: string): Promise<string> {
   return fetchStoryAttachmentText(
-    attachment.url,
-    attachment.name ?? 'ek',
-    attachment.contentType,
-    attachment.size,
+    {
+      url: attachment.url,
+      proxyUrl: attachment.proxyURL,
+      filename: attachment.name ?? 'ek',
+      contentType: attachment.contentType,
+      size: attachment.size,
+    },
+    botToken,
   );
 }
 
-async function extractMessageStory(message: Message): Promise<string> {
+export async function extractMessageStory(message: Message, botToken?: string): Promise<string> {
   const parts: string[] = [];
   const body = messageToText(message);
   if (body) parts.push(body);
 
   for (const attachment of message.attachments.values()) {
     try {
-      const fileText = await parseAttachment(attachment);
+      const fileText = await parseAttachment(attachment, botToken);
       if (fileText) {
         parts.push(`[Dosya: ${attachment.name}]\n${fileText}`);
       }
@@ -76,10 +80,80 @@ async function extractMessageStory(message: Message): Promise<string> {
   return parts.join('\n\n').trim();
 }
 
-async function combineMessagesStory(messages: Message[]): Promise<string> {
+export async function extractThreadStoryText(
+  thread: ThreadChannel,
+  botToken?: string,
+): Promise<{ text: string; sourceType: 'text' | 'pdf' | 'mixed' | 'unknown'; debug: string }> {
+  let messages: Message[] = [];
+
+  try {
+    const fetched = await thread.messages.fetch({ limit: 25 });
+    messages = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+  } catch {
+    // starter fallback
+  }
+
+  if (messages.length === 0) {
+    try {
+      const starter = await thread.fetchStarterMessage();
+      if (starter) {
+        messages = [starter.partial ? await starter.fetch() : starter];
+      }
+    } catch {
+      // ignore
+    }
+  } else if (messages[0]?.partial) {
+    messages[0] = await messages[0].fetch();
+  }
+
+  const debugParts: string[] = [];
+  let hasText = false;
+  let hasFile = false;
+  const parts: string[] = [];
+
+  for (const message of messages) {
+    const fullMessage = message.partial ? await message.fetch() : message;
+    const body = messageToText(fullMessage);
+    if (body) {
+      hasText = true;
+      parts.push(body);
+    }
+
+    for (const attachment of fullMessage.attachments.values()) {
+      const kind = attachment.name?.toLowerCase().endsWith('.pdf') ? 'pdf' : 'file';
+      try {
+        const fileText = await parseAttachment(attachment, botToken);
+        if (fileText) {
+          hasFile = true;
+          parts.push(`[Dosya: ${attachment.name}]\n${fileText}`);
+        } else {
+          debugParts.push(`${attachment.name}: 0 karakter`);
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        debugParts.push(`${attachment.name}: ${reason}`);
+        console.warn(`[story-fetch] Ek okunamadi (${attachment.name}, ${kind}):`, err);
+      }
+    }
+  }
+
+  const text = parts.join('\n\n').trim();
+  let sourceType: 'text' | 'pdf' | 'mixed' | 'unknown' = 'unknown';
+  if (hasText && hasFile) sourceType = 'mixed';
+  else if (hasFile) sourceType = 'pdf';
+  else if (hasText) sourceType = 'text';
+
+  let debug = 'mesaj/ek yok';
+  if (debugParts.length > 0) debug = debugParts.join('; ');
+  else if (!text && messages.length === 0) debug = 'mesaj okunamadi';
+
+  return { text, sourceType, debug };
+}
+
+async function combineMessagesStory(messages: Message[], botToken?: string): Promise<string> {
   const parts: string[] = [];
   for (const message of messages) {
-    const chunk = await extractMessageStory(message);
+    const chunk = await extractMessageStory(message, botToken);
     if (chunk) parts.push(chunk);
   }
   return parts.join('\n\n').trim();
@@ -128,25 +202,14 @@ function assertAllowedForum(thread: ThreadChannel) {
 async function fetchFromThread(_client: Client, thread: ThreadChannel): Promise<string> {
   assertAllowedForum(thread);
 
-  let messages: Message[] = [];
-
+  let token: string | undefined;
   try {
-    const fetched = await thread.messages.fetch({ limit: 25 });
-    messages = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-  } catch (err) {
-    console.warn('[story-fetch] Thread mesajlari okunamadi, starter deneniyor:', err);
+    token = getDiscordToken();
+  } catch {
+    token = undefined;
   }
 
-  if (messages.length === 0) {
-    try {
-      const starter = await thread.fetchStarterMessage();
-      if (starter) messages = [starter];
-    } catch {
-      // ignore
-    }
-  }
-
-  const text = await combineMessagesStory(messages);
+  const { text } = await extractThreadStoryText(thread, token);
   if (!text) {
     throw new StoryFetchError(
       `Konu icerigi okunamadi. Metin yazin veya PDF/DOCX/TXT ekleyin. ${FORUM_PERMISSION_HINT}`,
@@ -212,8 +275,14 @@ async function fetchFromLink(
     }
 
     if (channel && 'messages' in channel) {
+      let token: string | undefined;
+      try {
+        token = getDiscordToken();
+      } catch {
+        token = undefined;
+      }
       const message = await channel.messages.fetch(parsed.messageId);
-      const text = await extractMessageStory(message);
+      const text = await extractMessageStory(message, token);
       if (!text) {
         throw new StoryFetchError(
           `Mesajda okunabilir metin veya PDF/DOCX/TXT eki yok. ${FORUM_PERMISSION_HINT}`,

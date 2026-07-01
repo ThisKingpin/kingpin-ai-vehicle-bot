@@ -19,8 +19,17 @@ let pending: StageImportForm | null = null;
 
 export function enqueueStageImport(
   form: Omit<StageImportForm, 'importId'>,
+  opts?: { allowResync?: boolean },
 ): boolean {
-  if (seenThreadIds.has(form.threadId)) return false;
+  const hasStory = (form.storyText?.length ?? 0) > 0;
+  if (seenThreadIds.has(form.threadId)) {
+    if (opts?.allowResync && hasStory) {
+      queue.push({ ...form, importId: randomUUID() });
+      return true;
+    }
+    return false;
+  }
+
   seenThreadIds.add(form.threadId);
   queue.push({ ...form, importId: randomUUID() });
   return true;

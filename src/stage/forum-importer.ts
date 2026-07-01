@@ -9,14 +9,13 @@
 import {
   ChannelType,
   type Client,
-  type Message,
   type ThreadChannel,
 } from 'discord.js';
 import type { Pool } from 'mysql2/promise';
 import { insertForm, threadExists } from './db.js';
 import { enqueueStageImport } from './import-queue.js';
-import { fetchStoryAttachmentText } from '../services/attachment-text.js';
-import { env } from '../env.js';
+import { extractThreadStoryText } from '../services/story-fetch.js';
+import { env, getDiscordToken } from '../env.js';
 
 const NAME_PATTERNS = [
   /karakter\s*ad[ıi]\s*soyad[ıi]\s*[:：]\s*([^\n]+)/i,
@@ -94,50 +93,28 @@ export interface ParsedThreadForm {
   status: 'approved' | 'needs_review';
 }
 
-async function parseThread(thread: ThreadChannel, forumChannelId: string): Promise<ParsedThreadForm> {
-  let firstMessage: Message | null = null;
-
-  // Forum konularinda hikaye starter mesajda — messages.fetch({limit:1}) yanlis mesaji alabilir
+async function parseThread(
+  thread: ThreadChannel,
+  forumChannelId: string,
+): Promise<{ form: ParsedThreadForm; emptyDebug: string }> {
+  let token: string | undefined;
   try {
-    firstMessage = await thread.fetchStarterMessage();
+    token = getDiscordToken();
   } catch {
-    try {
-      const messages = await thread.messages.fetch({ limit: 100 });
-      if (messages.size > 0) {
-        const arr = [...messages.values()];
-        firstMessage = arr.reduce((oldest, msg) =>
-          (BigInt(msg.id) < BigInt(oldest.id) ? msg : oldest),
-        );
-      }
-    } catch {
-      // devam
-    }
+    token = undefined;
   }
 
-  const ownerId = thread.ownerId ?? firstMessage?.author.id ?? '';
+  const { text: storyTextRaw, sourceType, debug } = await extractThreadStoryText(thread, token);
   const title = thread.name ?? '';
-  let storyText = '';
-  let sourceType: 'text' | 'pdf' | 'mixed' | 'unknown' = 'unknown';
+  let storyText = storyTextRaw;
+  let ownerId = thread.ownerId ?? '';
 
-  if (firstMessage) {
-    storyText = firstMessage.content ?? '';
-    sourceType = 'text';
-
-    for (const attachment of firstMessage.attachments.values()) {
-      try {
-        const extracted = await fetchStoryAttachmentText(
-          attachment.url,
-          attachment.name,
-          attachment.contentType,
-          attachment.size,
-        );
-        if (extracted.trim()) {
-          storyText = storyText ? `${storyText}\n\n${extracted}` : extracted;
-          sourceType = storyText.length > extracted.length ? 'mixed' : 'pdf';
-        }
-      } catch (e) {
-        console.warn(`[stage/forum-importer] Attachment okunamadi (${attachment.name}):`, e);
-      }
+  if (!ownerId) {
+    try {
+      const starter = await thread.fetchStarterMessage();
+      ownerId = starter?.author.id ?? '';
+    } catch {
+      // ignore
     }
   }
 
@@ -149,15 +126,18 @@ async function parseThread(thread: ThreadChannel, forumChannelId: string): Promi
   const normCharName = charName ? normalizeName(charName) : null;
 
   return {
-    threadId: thread.id,
-    forumChannelId,
-    discordId: ownerId,
-    threadTitle: title || null,
-    characterName: charName,
-    normalizedCharacterName: normCharName,
-    storyText: storyText || null,
-    sourceType,
-    status: charName ? 'approved' : 'needs_review',
+    emptyDebug: debug,
+    form: {
+      threadId: thread.id,
+      forumChannelId,
+      discordId: ownerId,
+      threadTitle: title || null,
+      characterName: charName,
+      normalizedCharacterName: normCharName,
+      storyText: storyText || null,
+      sourceType,
+      status: charName ? 'approved' : 'needs_review',
+    },
   };
 }
 
@@ -168,18 +148,18 @@ async function saveThread(pool: Pool | null, form: ParsedThreadForm): Promise<bo
     return true;
   }
 
-  return enqueueStageImport(form);
+  return enqueueStageImport(form, { allowResync: true });
 }
 
 async function processThread(pool: Pool | null, thread: ThreadChannel, forumChannelId: string): Promise<'queued' | 'empty' | 'skipped'> {
-  const form = await parseThread(thread, forumChannelId);
+  const { form, emptyDebug } = await parseThread(thread, forumChannelId);
   const saved = await saveThread(pool, form);
   if (!saved) return 'skipped';
 
   const storyLen = form.storyText?.length ?? 0;
   if (storyLen === 0) {
     console.warn(
-      `[stage/forum-importer] Bos hikaye: ${form.threadId} "${form.threadTitle ?? ''}" (PDF/izin kontrol et)`,
+      `[stage/forum-importer] Bos hikaye: ${form.threadId} "${form.threadTitle ?? ''}" (${emptyDebug})`,
     );
     return 'empty';
   }
