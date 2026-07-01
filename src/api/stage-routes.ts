@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ackStageImport, pullNextStageImport } from '../stage/import-queue.js';
+import { getAnalyzeJob, startAnalyzeJob } from '../stage/analyze-jobs.js';
 import { analyzeStoryForStage } from '../stage/analyze-story.js';
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -47,6 +48,67 @@ export async function handleStageRoute(
     return true;
   }
 
+  // Async analiz baslat (hemen doner — FiveM timeout olmaz)
+  if (method === 'POST' && url === '/api/stage/analyze/start') {
+    let body: { story?: string; characterName?: string; threadId?: string };
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      sendJson(res, 400, { error: 'Gecersiz JSON' });
+      return true;
+    }
+
+    if (!body.threadId) {
+      sendJson(res, 400, { error: 'threadId gerekli' });
+      return true;
+    }
+
+    const story = body.story?.trim() ?? '';
+    if (!story) {
+      sendJson(res, 400, { success: false, error: 'story gerekli' });
+      return true;
+    }
+
+    const started = startAnalyzeJob(body.threadId, story, body.characterName);
+    sendJson(res, 202, { success: true, accepted: started, threadId: body.threadId });
+    return true;
+  }
+
+  // Async analiz sonucu poll
+  if (method === 'GET' && url.startsWith('/api/stage/analyze/result?')) {
+    const threadId = new URL(url, 'http://localhost').searchParams.get('threadId');
+    if (!threadId) {
+      sendJson(res, 400, { error: 'threadId gerekli' });
+      return true;
+    }
+
+    const job = getAnalyzeJob(threadId);
+    if (!job) {
+      sendJson(res, 404, { success: false, status: 'missing' });
+      return true;
+    }
+
+    if (job.status === 'pending') {
+      sendJson(res, 200, { success: true, status: 'pending' });
+      return true;
+    }
+
+    if (job.status === 'failed') {
+      sendJson(res, 200, { success: false, status: 'failed', error: job.error ?? 'Analiz basarisiz' });
+      return true;
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      status: 'done',
+      vehicle: job.vehicle,
+      vehicleLabel: job.vehicleLabel,
+      analysisReason: job.analysisReason,
+    });
+    return true;
+  }
+
+  // Legacy sync endpoint (geriye uyumluluk)
   if (method === 'POST' && url === '/api/stage/analyze') {
     let body: { story?: string; characterName?: string; threadId?: string };
     try {
