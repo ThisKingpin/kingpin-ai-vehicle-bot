@@ -96,11 +96,22 @@ export interface ParsedThreadForm {
 
 async function parseThread(thread: ThreadChannel, forumChannelId: string): Promise<ParsedThreadForm> {
   let firstMessage: Message | null = null;
+
+  // Forum konularinda hikaye starter mesajda — messages.fetch({limit:1}) yanlis mesaji alabilir
   try {
-    const messages = await thread.messages.fetch({ limit: 1, after: '0' });
-    firstMessage = messages.first() ?? null;
+    firstMessage = await thread.fetchStarterMessage();
   } catch {
-    // devam
+    try {
+      const messages = await thread.messages.fetch({ limit: 100 });
+      if (messages.size > 0) {
+        const arr = [...messages.values()];
+        firstMessage = arr.reduce((oldest, msg) =>
+          (BigInt(msg.id) < BigInt(oldest.id) ? msg : oldest),
+        );
+      }
+    } catch {
+      // devam
+    }
   }
 
   const ownerId = thread.ownerId ?? firstMessage?.author.id ?? '';
@@ -166,8 +177,10 @@ async function processThread(pool: Pool | null, thread: ThreadChannel, forumChan
   if (!saved) return;
 
   const mode = pool ? 'mysql' : 'queue';
+  const storyLen = form.storyText?.length ?? 0;
+  const warnEmpty = storyLen === 0 ? ' | UYARI: hikaye metni bos' : '';
   console.log(
-    `[stage/forum-importer] Import (${mode}): ${form.threadId} "${form.threadTitle ?? ''}" → ${form.status}`,
+    `[stage/forum-importer] Import (${mode}): ${form.threadId} "${form.threadTitle ?? ''}" → ${form.status} | story: ${storyLen} chars${warnEmpty}`,
   );
 }
 

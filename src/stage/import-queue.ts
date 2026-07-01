@@ -26,6 +26,12 @@ export function enqueueStageImport(
   return true;
 }
 
+/** Bot restart / re-sync: bos hikayeli konulari tekrar kuyruga alabilmek icin. */
+export function clearStageImportSeen(): void {
+  seenThreadIds.clear();
+  pending = null;
+}
+
 export function pullNextStageImport(): StageImportForm | null {
   if (pending) return null;
   const next = queue.shift();
