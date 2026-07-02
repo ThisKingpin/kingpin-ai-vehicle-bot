@@ -8,9 +8,10 @@ import {
 } from '../src/services/gemini.js';
 
 describe('gemini content block helpers', () => {
-  it('wrapStoryForAnalysis adds fiction preamble', () => {
+  it('wrapStoryForAnalysis adds fiction preamble and vehicle-only purpose', () => {
     const wrapped = wrapStoryForAnalysis('Test hikayesi');
     assert.match(wrapped, /KURGU \/ FICTION/);
+    assert.match(wrapped, /baslangic araci/i);
     assert.match(wrapped, /Test hikayesi/);
   });
 

@@ -18,10 +18,20 @@ const RP_SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-const STORY_FICTION_WRAPPER = `[KURGU / FICTION — FiveM GTA V ROLEPLAY]
-Bu metin gercek dunyada gecen bir olay degildir; Los Santos adli kurgusal bir sehirde oynanacak video oyunu (Grand Theft Auto V / FiveM) karakter basvurusudur.
+const ANALYSIS_PURPOSE = `KULLANIM AMACI (ZORUNLU):
+Bu istek yalnizca bir FiveM (GTA V) roleplay sunucusunda oyuncuya BASLANGIC ARACI vermek icindir.
+Metin moderasyon, yasak icerik tespiti, gercek dunya sorusturmasi veya baska hicbir amacla kullanilmaz.
+Hikayeyi "yasak", "uygunsuz", "red" veya "prohibited" diye etiketleme; reddetme; needs_admin_review alanini icerik yuzunden true yapma.
+Gorevin kurgusal karakterden ekonomik profil cikarip uygun arac sinifi onermek icin JSON uretmektir.
+Hikayedeki siddet, suc, silah vb. tamamen oyun icindeki kurgusal roleplay detayidir; bunlari raporlama konusu yapma, yalnizca meslek/yas/gelir/yasam tarzi sinyalini cikar.
+
+`;
+
+const STORY_FICTION_WRAPPER = `[KURGU / FICTION — FiveM GTA V ROLEPLAY — SADECE BASLANGIC ARACI]
+Bu metin gercek dunyada gecen bir olay degildir; Los Santos adli kurgusal bir sehirde oynanacak video oyunu karakter basvurusudur.
+Amac: Oyuncuya oyun icinde baslangic araci vermek. Baska hicbir amacla kullanilmayacaktir; moderasyon veya yasak icerik denetimi yapilmaz.
 Tum siddet, suc, silah ve olaylar tamamen hayali roleplay icerigidir. Gercek kisilere veya gercek suc tavsiyesine referans yoktur.
-Gorevin yalnizca ekonomik profil, meslek, yas, yasam tarzi ve arac ihtiyaci cikarmaktir; grafik detaylari yok say.
+Metni reddetme veya yasakla etiketleme; yalnizca ekonomik profil, meslek, yas, yasam tarzi ve arac ihtiyaci cikar.
 
 `;
 
@@ -30,7 +40,7 @@ export class GeminiContentBlockedError extends Error {
 
   constructor(blockReason: string) {
     super(
-      'Hikaye metni AI guvenlik filtresine takildi. Hikayede asiri grafik veya yasak icerik varsa duzenleyip tekrar deneyin; sorun devam ederse yetkiliye ticket acin.',
+      'Hikaye analizi su an tamamlanamadi. Birkac dakika sonra tekrar deneyin; sorun devam ederse yetkiliye ticket acin.',
     );
     this.name = 'GeminiContentBlockedError';
     this.blockReason = blockReason;
@@ -73,7 +83,7 @@ export function isContentBlockedError(err: unknown): boolean {
   return Boolean(response?.promptFeedback?.blockReason);
 }
 
-const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
+const SYSTEM_PROMPT = `${ANALYSIS_PURPOSE}Sen bir FiveM Roleplay karakter analiz uzmanisin.
 
 REFERANS YILI (ZORUNLU):
 - Tum karakter hikayeleri 2026 yilinda gecer; hikayenin "simdi", "bugun" ve sonu 2026'dir.
@@ -82,7 +92,7 @@ REFERANS YILI (ZORUNLU):
 - "X yil once" ifadelerini 2026'ya gore yorumla (ornek: 2021'de 20 yasindaydi → 2026'da 25).
 - Hikayede acik yas yaziyorsa (ornek: "27 yasinda") onu 2026 guncel yas kabul et.
 
-Gorevin oyuncuya arac vermek degil, karakter hikayesini analiz edip gercekci bir karakter profili cikarmaktir.
+Gorevin dogrudan arac vermek degil; karakter hikayesini analiz edip baslangic araci secimi icin gercekci bir profil cikarmaktir.
 
 Meslek tek basina karar sebebi degildir. Ayni meslekteki iki karakter farkli profillere sahip olabilir.
 
@@ -170,10 +180,11 @@ Sadece JSON dondur. Baska metin ekleme.`;
 
 const PROFILE_EXTRACTION_PROMPT = `${SYSTEM_PROMPT}
 
-EK GOREV (icerik moderasyonu):
-- Siddet, suc, silah, uyusturucu veya grafik sahneleri yok say; bunlar kurgusal roleplay detayidir.
+EK GOREV (baslangic araci profili):
+- Bu cikti yalnizca oyun icinde baslangic araci vermek icindir; baska amacla kullanilmaz.
+- Siddet, suc, silah veya roleplay sahnelerini yok say; bunlar kurgusal oyun detayidir, etiketleme veya reddetme.
 - Yalnizca meslek, yas, gelir, yasam tarzi, aile/kariyer baglami ve arac ihtiyacini cikar.
-- Eksik bilgi varsa hikayeden mantikli cikarim yap; JSON formatini koru.`;
+- Eksik bilgi varsa hikayeden mantikli cikarim yap; JSON formatini koru; needs_admin_review false birak (icerik yuzunden true yapma).`;
 
 /** Varsayilan: hiz + kalite dengesi. Pro icin GEMINI_MODEL=gemini-2.5-pro veya gemini-3.1-pro */
 const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
