@@ -6,6 +6,13 @@ import { parseAnalysisJson } from './normalize-analysis.js';
 
 const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
 
+REFERANS YILI (ZORUNLU):
+- Tum karakter hikayeleri 2026 yilinda gecer; hikayenin "simdi", "bugun" ve sonu 2026'dir.
+- age alanini 2026'daki guncel yas olarak yaz.
+- Dogum yili veya dogum tarihi varsa: age = 2026 - dogum_yili (ornek: 1998 dogumlu → age: 28).
+- "X yil once" ifadelerini 2026'ya gore yorumla (ornek: 2021'de 20 yasindaydi → 2026'da 25).
+- Hikayede acik yas yaziyorsa (ornek: "27 yasinda") onu 2026 guncel yas kabul et.
+
 Gorevin oyuncuya arac vermek degil, karakter hikayesini analiz edip gercekci bir karakter profili cikarmaktir.
 
 Meslek tek basina karar sebebi degildir. Ayni meslekteki iki karakter farkli profillere sahip olabilir.
@@ -45,7 +52,7 @@ Kurallar:
 - Kasabadan gelen dusuk gelirli karakter flashiness 1-3 olmali.
 - Polis karakter otomatik olarak zengin/sportif profil almamali; hikayeye gore belirle.
 - Suclu karakter otomatik yuksek flashiness almamali.
-- Yas hikayede netse age alanina sayi olarak yaz. Yas yoksa age alanini yazma.
+- Yas hikayede netse age alanina 2026'daki guncel yasi sayi olarak yaz. Yas yoksa age alanini yazma.
 - ABD gercekligi: 16 yas alti motorlu arac kullanamaz, BMX/bisiklet uygundur. 16-17 yas icin pahali/gosterisli/muscle/motor tercihini cok dikkatli degerlendir.
 - Ogrenci/kurye/ilk arac = compact, faggio veya BMX sinyali. Aile/kamp = SUV/van. Sandy Shores/Grapeseed/Paleto = off-road/pickup/kirsal sinyali. Kucuk esnaf/tamir/insaat = van/pickup sinyali.
 - 2026 gercekligi: Ceteci/criminal karakter otomatik lowrider kullanmaz. Modern ceteciler genelde temiz, zengin gorunumlu, dikkat cekmeyen sedan/SUV veya guclu modern muscle kullanabilir.
@@ -92,7 +99,7 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
 
 Sadece JSON dondur. Baska metin ekleme.`;
 
-/** gemini-2.0-flash shut down June 2026 — use 2.5+ on free tier */
+/** Varsayilan: hiz + kalite dengesi. Pro icin GEMINI_MODEL=gemini-2.5-pro veya gemini-3.1-pro */
 const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
 
 function getModelCandidates(): string[] {

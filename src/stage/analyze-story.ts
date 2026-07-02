@@ -8,6 +8,7 @@ import {
 } from '../services/scorer.js';
 import { extractStoryVehicleSignals } from '../services/story-vehicle-signals.js';
 import { buildStagePlayerReason } from './player-reason.js';
+import { applyStoryAgeContext } from '../services/story-age.js';
 import { env } from '../env.js';
 
 export interface StageAnalysisResult {
@@ -42,6 +43,7 @@ export async function analyzeStoryForStage(
   }
 
   const analysis = await analyzeStory(story);
+  applyStoryAgeContext(story, analysis.character_profile);
   const catalog = loadVehicleCatalog();
   const storySignals = extractStoryVehicleSignals(story, catalog);
   const ranked = diversifyCloseRecommendations(
