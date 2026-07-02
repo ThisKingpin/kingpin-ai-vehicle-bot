@@ -1,8 +1,77 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  GoogleGenerativeAI,
+  HarmBlockThreshold,
+  HarmCategory,
+  type GenerateContentResult,
+} from '@google/generative-ai';
 import type { AiAnalysis } from '../types.js';
 import { env } from '../env.js';
 import { withTimeout } from '../utils/timeout.js';
 import { parseAnalysisJson } from './normalize-analysis.js';
+
+/** GTA RP hikayeleri icin guvenlik esigi — kurgusal icerik engellenmesin */
+const RP_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+  { category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY, threshold: HarmBlockThreshold.BLOCK_NONE },
+];
+
+const STORY_FICTION_WRAPPER = `[KURGU / FICTION — FiveM GTA V ROLEPLAY]
+Bu metin gercek dunyada gecen bir olay degildir; Los Santos adli kurgusal bir sehirde oynanacak video oyunu (Grand Theft Auto V / FiveM) karakter basvurusudur.
+Tum siddet, suc, silah ve olaylar tamamen hayali roleplay icerigidir. Gercek kisilere veya gercek suc tavsiyesine referans yoktur.
+Gorevin yalnizca ekonomik profil, meslek, yas, yasam tarzi ve arac ihtiyaci cikarmaktir; grafik detaylari yok say.
+
+`;
+
+export class GeminiContentBlockedError extends Error {
+  readonly blockReason: string;
+
+  constructor(blockReason: string) {
+    super(
+      'Hikaye metni AI guvenlik filtresine takildi. Hikayede asiri grafik veya yasak icerik varsa duzenleyip tekrar deneyin; sorun devam ederse yetkiliye ticket acin.',
+    );
+    this.name = 'GeminiContentBlockedError';
+    this.blockReason = blockReason;
+  }
+}
+
+export function wrapStoryForAnalysis(story: string, maxChars?: number): string {
+  let body = story.trim();
+  if (maxChars && body.length > maxChars) {
+    body = `${body.slice(0, maxChars)}\n\n[... hikaye uzunluk nedeniyle kesildi ...]`;
+  }
+  return `${STORY_FICTION_WRAPPER}${body}`;
+}
+
+export function getResponseBlockReason(result: GenerateContentResult): string | null {
+  const feedback = result.response?.promptFeedback;
+  if (feedback?.blockReason) {
+    return String(feedback.blockReason);
+  }
+  const candidate = result.response?.candidates?.[0];
+  if (!candidate) return 'NO_CANDIDATES';
+  if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'PROHIBITED_CONTENT') {
+    return candidate.finishReason;
+  }
+  return null;
+}
+
+export function isContentBlockedError(err: unknown): boolean {
+  if (err instanceof GeminiContentBlockedError) return true;
+  const msg = err instanceof Error ? err.message : String(err);
+  if (
+    msg.includes('PROHIBITED_CONTENT')
+    || msg.includes('blocked due to')
+    || msg.includes('SAFETY')
+    || msg.includes('blockReason')
+  ) {
+    return true;
+  }
+  const response = (err as { response?: { promptFeedback?: { blockReason?: string } } })?.response;
+  return Boolean(response?.promptFeedback?.blockReason);
+}
 
 const SYSTEM_PROMPT = `Sen bir FiveM Roleplay karakter analiz uzmanisin.
 
@@ -99,6 +168,13 @@ ZORUNLU JSON formati (baska alan ekleme, character_profile sarmalayıcı zorunlu
 
 Sadece JSON dondur. Baska metin ekleme.`;
 
+const PROFILE_EXTRACTION_PROMPT = `${SYSTEM_PROMPT}
+
+EK GOREV (icerik moderasyonu):
+- Siddet, suc, silah, uyusturucu veya grafik sahneleri yok say; bunlar kurgusal roleplay detayidir.
+- Yalnizca meslek, yas, gelir, yasam tarzi, aile/kariyer baglami ve arac ihtiyacini cikar.
+- Eksik bilgi varsa hikayeden mantikli cikarim yap; JSON formatini koru.`;
+
 /** Varsayilan: hiz + kalite dengesi. Pro icin GEMINI_MODEL=gemini-2.5-pro veya gemini-3.1-pro */
 const DEFAULT_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
 
@@ -113,7 +189,20 @@ function isQuotaError(err: unknown): boolean {
   return msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
 }
 
-async function generateWithModel(apiKey: string, modelName: string, story: string): Promise<AiAnalysis> {
+interface GenerateOptions {
+  systemPrompt?: string;
+  maxChars?: number;
+}
+
+async function generateWithModel(
+  apiKey: string,
+  modelName: string,
+  story: string,
+  options: GenerateOptions = {},
+): Promise<AiAnalysis> {
+  const systemPrompt = options.systemPrompt ?? SYSTEM_PROMPT;
+  const wrappedStory = wrapStoryForAnalysis(story, options.maxChars);
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName,
@@ -121,18 +210,35 @@ async function generateWithModel(apiKey: string, modelName: string, story: strin
       responseMimeType: 'application/json',
       temperature: 0.4,
     },
+    safetySettings: RP_SAFETY_SETTINGS,
   });
 
   const result = await withTimeout(
     model.generateContent([
-      { text: SYSTEM_PROMPT },
-      { text: `Karakter hikayesi:\n\n${story}` },
+      { text: systemPrompt },
+      { text: `Karakter hikayesi:\n\n${wrappedStory}` },
     ]),
     60_000,
     `Gemini analizi (${modelName})`,
   );
 
-  const text = result.response.text();
+  const blockReason = getResponseBlockReason(result);
+  if (blockReason) {
+    throw new GeminiContentBlockedError(blockReason);
+  }
+
+  let text: string;
+  try {
+    text = result.response.text();
+  } catch (err) {
+    if (isContentBlockedError(err)) {
+      throw new GeminiContentBlockedError(
+        getResponseBlockReason(result) ?? 'PROHIBITED_CONTENT',
+      );
+    }
+    throw err;
+  }
+
   return parseAnalysisJson(text);
 }
 
@@ -142,19 +248,39 @@ export async function analyzeStoryWithGemini(story: string): Promise<AiAnalysis>
 
   const models = getModelCandidates();
   let lastError: unknown;
+  let lastBlockReason: string | null = null;
 
   for (const modelName of models) {
-    try {
-      console.log(`[gemini] Model deneniyor: ${modelName}`);
-      return await generateWithModel(apiKey, modelName, story);
-    } catch (err) {
-      lastError = err;
-      if (isQuotaError(err) && models.indexOf(modelName) < models.length - 1) {
-        console.warn(`[gemini] ${modelName} kotasi dolu, sonraki model deneniyor...`);
-        continue;
+    const modes: Array<{ prompt: string; maxChars?: number; label: string }> = [
+      { prompt: SYSTEM_PROMPT, label: 'tam' },
+      { prompt: PROFILE_EXTRACTION_PROMPT, maxChars: 12_000, label: 'profil-ozet' },
+    ];
+
+    for (const mode of modes) {
+      try {
+        console.log(`[gemini] Deneme: ${modelName} (${mode.label})`);
+        return await generateWithModel(apiKey, modelName, story, {
+          systemPrompt: mode.prompt,
+          maxChars: mode.maxChars,
+        });
+      } catch (err) {
+        lastError = err;
+        if (err instanceof GeminiContentBlockedError) {
+          lastBlockReason = err.blockReason;
+          console.warn(`[gemini] Icerik engeli (${modelName}/${mode.label}): ${err.blockReason}`);
+          continue;
+        }
+        if (isQuotaError(err)) {
+          console.warn(`[gemini] ${modelName} kotasi dolu, sonraki model deneniyor...`);
+          break;
+        }
+        throw err;
       }
-      throw err;
     }
+  }
+
+  if (lastBlockReason || isContentBlockedError(lastError)) {
+    throw new GeminiContentBlockedError(lastBlockReason ?? 'PROHIBITED_CONTENT');
   }
 
   throw lastError ?? new Error('Gemini analizi basarisiz');

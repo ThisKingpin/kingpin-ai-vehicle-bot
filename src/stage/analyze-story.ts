@@ -1,4 +1,4 @@
-import { analyzeStoryWithGemini } from '../services/gemini.js';
+import { analyzeStoryWithGemini, GeminiContentBlockedError } from '../services/gemini.js';
 import { analyzeStoryFallback } from '../services/openai.js';
 import {
   diversifyCloseRecommendations,
@@ -17,6 +17,14 @@ export interface StageAnalysisResult {
   analysisReason: string;
 }
 
+function formatOpenAiFailure(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('billing')) {
+    return 'OpenAI kotasi dolu veya fatura sorunu var.';
+  }
+  return msg;
+}
+
 async function analyzeStory(story: string) {
   const geminiKey = env('GEMINI_API_KEY');
   const openaiKey = env('OPENAI_API_KEY');
@@ -24,9 +32,19 @@ async function analyzeStory(story: string) {
   if (geminiKey) {
     try {
       return await analyzeStoryWithGemini(story);
-    } catch (e) {
-      if (!openaiKey) throw e;
-      console.warn('[stage/analyze] Gemini basarisiz, OpenAI fallback:', e);
+    } catch (geminiErr) {
+      if (!openaiKey) throw geminiErr;
+      const geminiMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+      console.warn('[stage/analyze] Gemini basarisiz, OpenAI fallback:', geminiMsg);
+      try {
+        return await analyzeStoryFallback(story);
+      } catch (openaiErr) {
+        const openaiMsg = formatOpenAiFailure(openaiErr);
+        if (geminiErr instanceof GeminiContentBlockedError) {
+          throw new Error(`${geminiMsg} OpenAI yedegi de calismadi: ${openaiMsg}`);
+        }
+        throw new Error(`AI analizi basarisiz. Gemini: ${geminiMsg}. OpenAI: ${openaiMsg}`);
+      }
     }
   }
 
