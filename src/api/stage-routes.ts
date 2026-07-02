@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ackStageImport, pullNextStageImport } from '../stage/import-queue.js';
+import { fetchStageThreadById } from '../stage/forum-importer.js';
 import { getAnalyzeJob, startAnalyzeJob } from '../stage/analyze-jobs.js';
 import { analyzeStoryForStage } from '../stage/analyze-story.js';
 
@@ -45,6 +46,32 @@ export async function handleStageRoute(
 
     const ok = ackStageImport(body.threadId, body.success === true);
     sendJson(res, ok ? 200 : 404, { success: ok });
+    return true;
+  }
+
+  // On-demand: tek forum konusunu Discord'dan oku (FiveM /aracal)
+  if (method === 'POST' && url === '/api/stage/import/fetch') {
+    let body: { threadId?: string };
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      sendJson(res, 400, { error: 'Gecersiz JSON' });
+      return true;
+    }
+
+    if (!body.threadId) {
+      sendJson(res, 400, { error: 'threadId gerekli' });
+      return true;
+    }
+
+    try {
+      const form = await fetchStageThreadById(body.threadId);
+      sendJson(res, 200, { success: true, form });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[stage/import] Fetch basarisiz (${body.threadId}):`, msg);
+      sendJson(res, 404, { success: false, error: msg });
+    }
     return true;
   }
 

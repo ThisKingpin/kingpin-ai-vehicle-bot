@@ -8,6 +8,7 @@ import { env, getDiscordToken, maskToken } from './env.js';
 import { pingBridgeOnStartup } from './services/fivem.js';
 import { startApiServer } from './api/server.js';
 import { initStagePool } from './stage/db.js';
+import { setStageDiscordClient } from './stage/discord-client.js';
 import { startForumImporter } from './stage/forum-importer.js';
 import { startAnalyzerWorker } from './stage/analyzer-worker.js';
 
@@ -99,6 +100,8 @@ async function main() {
 
   const applicationId = client.user!.id;
   console.log(`[kingpin-ai-vehicle-bot] Giris: ${client.user!.tag} (id: ${applicationId})`);
+
+  setStageDiscordClient(client);
 
   const envClientId = env('DISCORD_CLIENT_ID');
   if (envClientId && envClientId !== applicationId) {

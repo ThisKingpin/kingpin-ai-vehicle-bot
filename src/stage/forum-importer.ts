@@ -16,6 +16,7 @@ import { insertForm, threadExists } from './db.js';
 import { enqueueStageImport } from './import-queue.js';
 import { extractThreadStoryText } from '../services/story-fetch.js';
 import { env, getDiscordToken } from '../env.js';
+import { getStageDiscordClient } from './discord-client.js';
 
 const NAME_PATTERNS = [
   /karakter\s*ad[ıi]\s*soyad[ıi]\s*[:：]\s*([^\n]+)/i,
@@ -238,6 +239,50 @@ async function bulkImport(client: Client, pool: Pool | null, forumChannelId: str
   );
 }
 
+/** /aracal veya API ile tek konu cek — Discord'dan okur, DB'ye yazmaz. */
+export async function fetchStageThreadById(threadId: string): Promise<ParsedThreadForm> {
+  const forumChannelId = env('STAGE_FORUM_CHANNEL_ID');
+  if (!forumChannelId) {
+    throw new Error('STAGE_FORUM_CHANNEL_ID tanimli degil.');
+  }
+
+  const id = threadId.trim().replace(/\D/g, '');
+  if (!id || id.length < 17) {
+    throw new Error('Gecersiz konu ID.');
+  }
+
+  const client = getStageDiscordClient();
+  let channel;
+  try {
+    channel = await client.channels.fetch(id);
+  } catch (e) {
+    logDiscordAccessError('Konu alinamadi', e);
+    throw new Error('Konu bulunamadi veya bot bu konuyu goremiyor.');
+  }
+
+  if (!channel?.isThread()) {
+    throw new Error('Bu ID bir forum konusu (thread) degil.');
+  }
+
+  if (channel.parentId !== forumChannelId) {
+    throw new Error('Bu konu izin verilen karakter forumunda degil.');
+  }
+
+  const { form, emptyDebug } = await parseThread(channel, forumChannelId);
+  const storyLen = form.storyText?.length ?? 0;
+  if (storyLen === 0) {
+    console.warn(
+      `[stage/forum-importer] On-demand bos hikaye: ${form.threadId} "${form.threadTitle ?? ''}" (${emptyDebug})`,
+    );
+  } else {
+    console.log(
+      `[stage/forum-importer] On-demand import: ${form.threadId} "${form.threadTitle ?? ''}" (${storyLen} karakter)`,
+    );
+  }
+
+  return form;
+}
+
 /** pool=null → pull modu (FiveM MySQL'e yazar). pool varsa legacy direct MySQL. */
 export function startForumImporter(client: Client, pool: Pool | null): void {
   const forumChannelId = env('STAGE_FORUM_CHANNEL_ID');
@@ -246,8 +291,15 @@ export function startForumImporter(client: Client, pool: Pool | null): void {
     return;
   }
 
+  const onDemandOnly = env('STAGE_BULK_IMPORT') !== '1';
   const mode = pool ? 'direct-mysql' : 'pull-queue';
-  console.log(`[stage/forum-importer] Baslatildi (${mode}, channel: ${forumChannelId})`);
+
+  if (onDemandOnly) {
+    console.log(`[stage/forum-importer] On-demand modu (${mode}) — /aracal ile konu cekilir.`);
+    return;
+  }
+
+  console.log(`[stage/forum-importer] Bulk import modu (${mode}, channel: ${forumChannelId})`);
 
   bulkImport(client, pool, forumChannelId).catch((e) =>
     console.error('[stage/forum-importer] Bulk import hatasi:', e),
