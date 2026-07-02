@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AiAnalysis, CharacterProfile, ScoredVehicle, VehicleCatalog, VehicleEntry } from '../types.js';
+import type { StoryVehicleSignals } from './story-vehicle-signals.js';
+import { bodyTypeConflicts, storySignalScore, vehicleMatchesBodyType } from './story-vehicle-signals.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -112,17 +114,26 @@ function profileSearchText(profile: CharacterProfile): string {
   return `${profile.vehicle_need} ${profile.vehicle_purpose ?? ''} ${profile.financial_pressure ?? ''} ${profile.family_support ?? ''} ${profile.life_stage ?? ''} ${profile.career_stage ?? ''} ${profile.dominant_vibes.join(' ')} ${(profile.personality ?? []).join(' ')} ${profile.gender ?? ''} ${profile.origin} ${profile.lifestyle} ${profile.job_type}`.toLowerCase();
 }
 
-function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
+function inferPreferredBodyClasses(
+  profile: CharacterProfile,
+  storySignals?: StoryVehicleSignals,
+): string[] {
+  if (storySignals?.explicitBodyTypes.length) {
+    return storySignals.explicitBodyTypes;
+  }
+
   const text = profileSearchText(profile);
   const preferred = new Set<string>();
+  let hasExplicit = false;
 
   for (const [bodyClass, keywords] of Object.entries(BODY_TYPE_KEYWORDS)) {
     if (keywords.some((keyword) => text.includes(keyword))) {
       preferred.add(bodyClass);
+      hasExplicit = true;
     }
   }
 
-  if (profile.origin === 'rural' && profile.lifestyle !== 'flashy') {
+  if (!hasExplicit && profile.origin === 'rural' && profile.lifestyle !== 'flashy') {
     preferred.add('suv');
     preferred.add('pickup');
     preferred.add('offroad');
@@ -131,16 +142,26 @@ function inferPreferredBodyClasses(profile: CharacterProfile): string[] {
   return [...preferred];
 }
 
-function bodyClassMatchesPreference(vehicleClass: string, preferred: string[]): boolean {
+function bodyClassConflictsPreference(
+  vehicleClass: string,
+  preferred: string[],
+  vehicle: VehicleEntry,
+): boolean {
   if (preferred.length === 0) return false;
-  return preferred.some((pref) => (CLASS_GROUPS[pref] ?? [pref]).includes(vehicleClass));
-}
+  if (bodyTypeConflicts(preferred, vehicle)) return true;
 
-function bodyClassConflictsPreference(vehicleClass: string, preferred: string[]): boolean {
-  if (preferred.length === 0) return false;
   const wantsSuvOrTruck = preferred.some((p) => p === 'suv' || p === 'pickup' || p === 'offroad');
-  if (!wantsSuvOrTruck) return false;
-  return vehicleClass === 'sedan' || vehicleClass === 'old_sedan' || vehicleClass === 'sports';
+  const wantsSedan = preferred.some((p) => p === 'sedan' || p === 'compact');
+
+  if (wantsSuvOrTruck && !wantsSedan) {
+    return vehicleClass === 'sedan' || vehicleClass === 'old_sedan' || vehicleClass === 'compact' || vehicleClass === 'sports';
+  }
+
+  if (wantsSedan && !wantsSuvOrTruck) {
+    return vehicleClass === 'suv' || vehicleClass === 'pickup' || vehicleClass === 'offroad';
+  }
+
+  return false;
 }
 
 function overlapCount(a: string[], b: string[]): number {
@@ -398,11 +419,20 @@ function buildReason(profile: CharacterProfile, vehicle: VehicleEntry, score: nu
   return `${vehicle.label}${priceText}${catText}: ${Math.round(score)} puan. ${vehicle.class} / ${vehicle.price_tier} segment.${ageText} Sebepler: ${reasons.slice(0, 5).join('; ')}.`;
 }
 
-export function scoreVehicle(profile: CharacterProfile, vehicle: VehicleEntry): number {
-  return Math.max(0, Math.min(100, scoreVehicleRaw(profile, vehicle)));
+export function scoreVehicle(
+  profile: CharacterProfile,
+  vehicle: VehicleEntry,
+  storySignals?: StoryVehicleSignals,
+): number {
+  return Math.max(0, Math.min(100, scoreVehicleRaw(profile, vehicle, storySignals)));
 }
 
-export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry): number {
+export function scoreVehicleRaw(
+  profile: CharacterProfile,
+  vehicle: VehicleEntry,
+  storySignals?: StoryVehicleSignals,
+  catalog?: VehicleCatalog,
+): number {
   let score = 0;
 
   const vibeOverlap = overlapCount(profile.dominant_vibes, vehicle.vibes);
@@ -496,10 +526,10 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
     score -= 10;
   }
 
-  const preferredBodies = inferPreferredBodyClasses(profile);
-  if (bodyClassMatchesPreference(vehicle.class, preferredBodies)) {
+  const preferredBodies = inferPreferredBodyClasses(profile, storySignals);
+  if (preferredBodies.some((pref) => vehicleMatchesBodyType(vehicle, pref))) {
     score += 45;
-  } else if (bodyClassConflictsPreference(vehicle.class, preferredBodies)) {
+  } else if (bodyClassConflictsPreference(vehicle.class, preferredBodies, vehicle)) {
     score -= 45;
   }
 
@@ -511,6 +541,8 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
     }
   }
 
+  score += storySignalScore(storySignals, vehicle, catalog ?? loadVehicleCatalog());
+
   if (profile.age !== undefined && profile.age < 16 && vehicle.class !== 'bmx') {
     score -= 500;
   }
@@ -518,11 +550,22 @@ export function scoreVehicleRaw(profile: CharacterProfile, vehicle: VehicleEntry
   return Math.max(0, score);
 }
 
-export function rankVehicles(profile: CharacterProfile, limit = 5): ScoredVehicle[] {
-  const { vehicles } = loadVehicleCatalog();
-  const scored = vehicles
+export function rankVehicles(
+  profile: CharacterProfile,
+  limit = 5,
+  storySignals?: StoryVehicleSignals,
+): ScoredVehicle[] {
+  const catalog = loadVehicleCatalog();
+  const { vehicles } = catalog;
+
+  let pool = vehicles;
+  if (storySignals?.forceBicycle) {
+    pool = vehicles.filter((v) => v.class === 'bmx');
+  }
+
+  const scored = pool
     .map((vehicle) => {
-      const rawScore = scoreVehicleRaw(profile, vehicle);
+      const rawScore = scoreVehicleRaw(profile, vehicle, storySignals, catalog);
       return {
         vehicle: vehicle.model,
         label: vehicle.label,

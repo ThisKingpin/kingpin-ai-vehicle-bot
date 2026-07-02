@@ -197,12 +197,28 @@ function buildVehicleFitReasons(profile: CharacterProfile, vehicle: VehicleEntry
 }
 
 /** Oyuncuya gosterilecek net, Turkce gerekce (STAGE /aracal). */
-export function buildStagePlayerReason(profile: CharacterProfile, vehicle: VehicleEntry): string {
-  const storySignals = buildStorySignals(profile);
-  const fitReasons = buildVehicleFitReasons(profile, vehicle);
+export function buildStagePlayerReason(
+  profile: CharacterProfile,
+  vehicle: VehicleEntry,
+  storyHints?: { explicitBodyTypes?: string[]; mentionedModels?: Set<string> },
+): string {
+  const storyParts = buildStorySignals(profile);
 
-  const storyLine = storySignals.length > 0
-    ? `Hikayenizden: ${storySignals.join(', ')}.`
+  if (storyHints?.explicitBodyTypes?.length) {
+    const types = storyHints.explicitBodyTypes
+      .slice(0, 2)
+      .map((t) => CLASS_TR[t] ?? t)
+      .join(', ');
+    storyParts.unshift(`hikayede belirttiğiniz araç tipi: ${types}`);
+  }
+
+  if (storyHints?.mentionedModels?.size) {
+    storyParts.push('hikayede geçen model adı birebir verilmedi; aynı tipten katalog aracı seçildi');
+  }
+
+  const fitReasons = buildVehicleFitReasons(profile, vehicle);
+  const storyLine = storyParts.length > 0
+    ? `Hikayenizden: ${unique(storyParts).slice(0, 5).join(', ')}.`
     : 'Hikayenizdeki yaşam tarzı, gelir ve kullanım ihtiyacı değerlendirildi.';
 
   const fitLine = fitReasons.length > 0

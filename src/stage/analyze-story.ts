@@ -6,6 +6,7 @@ import {
   mergeRecommendations,
   rankVehicles,
 } from '../services/scorer.js';
+import { extractStoryVehicleSignals } from '../services/story-vehicle-signals.js';
 import { buildStagePlayerReason } from './player-reason.js';
 import { env } from '../env.js';
 
@@ -41,8 +42,10 @@ export async function analyzeStoryForStage(
   }
 
   const analysis = await analyzeStory(story);
+  const catalog = loadVehicleCatalog();
+  const storySignals = extractStoryVehicleSignals(story, catalog);
   const ranked = diversifyCloseRecommendations(
-    mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5)),
+    mergeRecommendations(analysis, rankVehicles(analysis.character_profile, 5, storySignals)),
     seed,
   );
 
@@ -51,10 +54,9 @@ export async function analyzeStoryForStage(
   }
 
   const top = ranked[0];
-  const catalog = loadVehicleCatalog();
   const vehicleEntry = catalog.vehicles.find((v) => v.model === top.vehicle);
   const analysisReason = vehicleEntry
-    ? buildStagePlayerReason(analysis.character_profile, vehicleEntry)
+    ? buildStagePlayerReason(analysis.character_profile, vehicleEntry, storySignals)
     : (top.reason ?? '');
 
   return {
