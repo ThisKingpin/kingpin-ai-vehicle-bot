@@ -2,9 +2,11 @@ import { analyzeStoryWithGemini } from '../services/gemini.js';
 import { analyzeStoryFallback } from '../services/openai.js';
 import {
   diversifyCloseRecommendations,
+  loadVehicleCatalog,
   mergeRecommendations,
   rankVehicles,
 } from '../services/scorer.js';
+import { buildStagePlayerReason } from './player-reason.js';
 import { env } from '../env.js';
 
 export interface StageAnalysisResult {
@@ -49,9 +51,15 @@ export async function analyzeStoryForStage(
   }
 
   const top = ranked[0];
+  const catalog = loadVehicleCatalog();
+  const vehicleEntry = catalog.vehicles.find((v) => v.model === top.vehicle);
+  const analysisReason = vehicleEntry
+    ? buildStagePlayerReason(analysis.character_profile, vehicleEntry)
+    : (top.reason ?? '');
+
   return {
     vehicle: top.vehicle,
     vehicleLabel: top.label,
-    analysisReason: top.reason ?? '',
+    analysisReason,
   };
 }
